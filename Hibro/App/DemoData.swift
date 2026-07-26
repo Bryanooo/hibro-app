@@ -87,8 +87,8 @@ enum DemoData {
         apiVersion: "2026-07-25",
         user: CoreUser(
             id: "usr_demo",
-            username: "owner",
-            displayName: "Hibro Owner",
+            username: "bryan",
+            displayName: "Bryan",
             roles: ["owner"],
             status: "active"
         ),

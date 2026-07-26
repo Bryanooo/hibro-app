@@ -60,6 +60,10 @@ final class HibroUITests: XCTestCase {
         XCTAssertTrue(
             app.staticTexts["需要你的决定"].waitForExistence(timeout: 8)
         )
+        let greeting = app.staticTexts["home.greeting"]
+        XCTAssertTrue(greeting.exists)
+        XCTAssertTrue(greeting.label.contains("Bryan"))
+        XCTAssertLessThan(greeting.frame.height, 36)
         app.swipeUp()
         app.swipeUp()
         XCTAssertTrue(

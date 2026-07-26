@@ -61,6 +61,26 @@ struct CoreUser: Codable, Hashable, Sendable, Identifiable {
     let displayName: String
     let roles: [String]
     let status: String?
+
+    var greetingName: String {
+        let display = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let genericDisplayNames = [
+            "hibro owner",
+            "hibro admin",
+            "owner",
+            "admin",
+        ]
+        if !display.isEmpty, !genericDisplayNames.contains(display.lowercased()) {
+            return display
+        }
+
+        let account = username.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !account.isEmpty else { return "Hibro" }
+        if ["owner", "admin"].contains(account.lowercased()) {
+            return "Hibro"
+        }
+        return account.prefix(1).uppercased() + account.dropFirst()
+    }
 }
 
 struct CoreOverview: Codable, Hashable, Sendable {

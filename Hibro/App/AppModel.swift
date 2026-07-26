@@ -131,6 +131,7 @@ final class AppModel {
     }
 
     var currentUser: CoreUser? { bootstrap?.user }
+    var greetingName: String { currentUser?.greetingName ?? "Hibro" }
     var agents: [CoreAgent] { bootstrap?.agents ?? [] }
     var nodes: [CoreNode] { bootstrap?.nodes ?? [] }
     var teams: [CoreTeam] { bootstrap?.teams ?? [] }
@@ -325,6 +326,29 @@ final class AppModel {
             value.rawValue,
             forKey: Self.appearanceDefaultsKey
         )
+    }
+
+    func updateDisplayName(_ value: String) async -> Bool {
+        guard let displayName = value.nilIfBlank, let user = currentUser else {
+            return false
+        }
+        if isDemoMode {
+            return true
+        }
+        isWorking = true
+        defer { isWorking = false }
+        do {
+            _ = try await api.updateUserDisplayName(
+                userID: user.id,
+                displayName: displayName
+            )
+            try await refresh()
+            return true
+        } catch {
+            markConnectionUnavailable(error)
+            handle(error)
+            return false
+        }
     }
 
     func openConversation(_ id: String) async {

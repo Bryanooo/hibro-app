@@ -49,6 +49,15 @@ actor CoreAPI {
         return response.values
     }
 
+    func updateUserDisplayName(userID: String, displayName: String) async throws -> CoreUser {
+        struct Input: Encodable { let displayName: String }
+        return try await request(
+            path: "/v1/security/users/\(userID.urlPathSegment)",
+            method: "PUT",
+            body: Input(displayName: displayName)
+        )
+    }
+
     func artifact(id: String) async throws -> CoreArtifact {
         let response: ArtifactResponse = try await request(
             path: "/v1/artifacts/\(id.urlPathSegment)"

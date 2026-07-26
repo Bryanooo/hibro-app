@@ -4,11 +4,18 @@ struct SettingsView: View {
     @Environment(AppModel.self) private var model
     @State private var confirmingLogout = false
     @State private var confirmingServerChange = false
+    @State private var showingDisplayNameEditor = false
+    @State private var displayNameDraft = ""
 
     var body: some View {
         Form {
             Section("账号") {
-                LabeledContent("用户", value: model.currentUser?.displayName ?? "—")
+                Button {
+                    displayNameDraft = model.greetingName
+                    showingDisplayNameEditor = true
+                } label: {
+                    LabeledContent("称呼", value: model.greetingName)
+                }
                 LabeledContent("账号", value: model.currentUser?.username ?? "—")
                 LabeledContent(
                     "角色",
@@ -100,6 +107,23 @@ struct SettingsView: View {
             }
         }
         .navigationTitle("设置")
+        .alert("修改称呼", isPresented: $showingDisplayNameEditor) {
+            TextField("例如 Bryan", text: $displayNameDraft)
+                .textInputAutocapitalization(.words)
+            Button("取消", role: .cancel) {}
+            Button("保存") {
+                Task {
+                    _ = await model.updateDisplayName(displayNameDraft)
+                }
+            }
+            .disabled(
+                displayNameDraft.trimmingCharacters(
+                    in: .whitespacesAndNewlines
+                ).isEmpty
+            )
+        } message: {
+            Text("称呼会保存到当前 Hibro Core 账号，并显示在首页问候语中。")
+        }
         .confirmationDialog(
             "确定退出 Hibro？",
             isPresented: $confirmingLogout,

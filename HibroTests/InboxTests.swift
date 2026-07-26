@@ -2,6 +2,26 @@ import XCTest
 @testable import Hibro
 
 final class InboxTests: XCTestCase {
+    func testGreetingUsesRealDisplayNameAndAvoidsGenericOwnerLabel() {
+        let namedUser = CoreUser(
+            id: "usr_named",
+            username: "bryan",
+            displayName: "Bryan",
+            roles: ["owner"],
+            status: "active"
+        )
+        let defaultOwner = CoreUser(
+            id: "usr_owner",
+            username: "bryan",
+            displayName: "Hibro Owner",
+            roles: ["owner"],
+            status: "active"
+        )
+
+        XCTAssertEqual(namedUser.greetingName, "Bryan")
+        XCTAssertEqual(defaultOwner.greetingName, "Bryan")
+    }
+
     func testInboxPrioritizesAttentionOverCompletedRuns() {
         let items = InboxBuilder.build(
             runs: DemoData.runs,

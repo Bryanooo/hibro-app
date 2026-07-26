@@ -59,7 +59,12 @@ struct HomeView: View {
         HStack(alignment: .top, spacing: 18) {
             VStack(alignment: .leading, spacing: 7) {
                 Text(greeting)
-                    .font(.largeTitle.bold())
+                    .font(.title2.bold())
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+                    .allowsTightening(true)
+                    .layoutPriority(1)
+                    .accessibilityIdentifier("home.greeting")
                 Text(summary)
                     .foregroundStyle(.secondary)
             }
@@ -252,7 +257,7 @@ struct HomeView: View {
     private var greeting: String {
         let hour = Calendar.current.component(.hour, from: Date())
         let prefix = hour < 6 ? "夜深了" : hour < 12 ? "早上好" : hour < 18 ? "下午好" : "晚上好"
-        return "\(prefix)，\(model.currentUser?.displayName ?? "Hibro")"
+        return "\(prefix)，\(model.greetingName)"
     }
 }
 

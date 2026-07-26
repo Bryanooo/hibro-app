@@ -110,6 +110,7 @@ struct RunDetailView: View {
     let runID: String
     @State private var confirmingCancel = false
     @State private var confirmingRetry = false
+    @State private var section = RunDetailSection.overview
 
     private var run: CoreRun? {
         model.runs.first(where: { $0.id == runID })
@@ -144,15 +145,8 @@ struct RunDetailView: View {
             if let run {
                 VStack(alignment: .leading, spacing: 22) {
                     goalHeader(run)
-                    if !decisions.isEmpty {
-                        decisionBanner
-                    }
-                    lifecycle(run)
-                    eventTimeline
-                    collaborators(run)
-                    outcome(run)
-                    artifacts
-                    technicalDetails(run)
+                    sectionPicker
+                    sectionContent(run)
                 }
                 .padding(20)
                 .frame(maxWidth: 900)
@@ -216,6 +210,63 @@ struct RunDetailView: View {
         } message: {
             Text("将沿用原来的 Agent、目标和会话设置，创建一次新的运行。")
         }
+    }
+
+    private var sectionPicker: some View {
+        Picker("运行详情内容", selection: $section) {
+            ForEach(RunDetailSection.allCases) { section in
+                Label(section.title, systemImage: section.symbol)
+                    .tag(section)
+            }
+        }
+        .pickerStyle(.segmented)
+        .accessibilityIdentifier("run-detail-sections")
+    }
+
+    @ViewBuilder
+    private func sectionContent(_ run: CoreRun) -> some View {
+        switch section {
+        case .overview:
+            if !decisions.isEmpty {
+                decisionBanner
+            }
+            lifecycle(run)
+            collaborators(run)
+            outcome(run)
+            technicalDetails(run)
+        case .timeline:
+            if runEvents.isEmpty {
+                sectionEmptyState(
+                    symbol: "clock.arrow.circlepath",
+                    title: "还没有运行事件",
+                    message: "Core 上报的执行、工具调用和审批轨迹会显示在这里。"
+                )
+            } else {
+                eventTimeline
+            }
+        case .conversation:
+            conversationSection
+        case .artifacts:
+            if runArtifacts.isEmpty {
+                sectionEmptyState(
+                    symbol: "doc",
+                    title: "还没有产出",
+                    message: "Agent 生成的文件、报告和补丁会集中显示在这里。"
+                )
+            } else {
+                artifacts
+            }
+        }
+    }
+
+    private func sectionEmptyState(
+        symbol: String,
+        title: String,
+        message: String
+    ) -> some View {
+        EmptyStateView(symbol: symbol, title: title, message: message)
+            .frame(maxWidth: .infinity, minHeight: 260)
+            .hibroPanel()
     }
 
     private func goalHeader(_ run: CoreRun) -> some View {
@@ -396,6 +447,53 @@ struct RunDetailView: View {
     }
 
     @ViewBuilder
+    private var conversationSection: some View {
+        if let relatedConversation {
+            VStack(alignment: .leading, spacing: 14) {
+                SectionHeader(
+                    title: "关联对话",
+                    caption: "查看目标执行期间的人与 Agent 沟通"
+                )
+                NavigationLink {
+                    ConversationDetailView(conversationID: relatedConversation.id)
+                } label: {
+                    HStack(spacing: 13) {
+                        Image(systemName: "bubble.left.and.bubble.right.fill")
+                            .font(.title2)
+                            .foregroundStyle(HibroTheme.violet)
+                            .frame(width: 46, height: 46)
+                            .background(
+                                HibroTheme.violet.opacity(0.12),
+                                in: RoundedRectangle(cornerRadius: 13)
+                            )
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(relatedConversation.title)
+                                .font(.headline)
+                            Text(
+                                "\(model.agentName(relatedConversation.agentId)) · \(DateText.relative(relatedConversation.updatedAt))"
+                            )
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(16)
+                    .hibroPanel()
+                }
+                .buttonStyle(.plain)
+            }
+        } else {
+            sectionEmptyState(
+                symbol: "bubble.left.and.bubble.right",
+                title: "没有关联对话",
+                message: "这次运行没有可展示的会话上下文。"
+            )
+        }
+    }
+
+    @ViewBuilder
     private func outcome(_ run: CoreRun) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             SectionHeader(
@@ -528,6 +626,33 @@ struct RunDetailView: View {
         .hibroPanel()
     }
 
+}
+
+private enum RunDetailSection: String, CaseIterable, Identifiable {
+    case overview
+    case timeline
+    case conversation
+    case artifacts
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .overview: "概览"
+        case .timeline: "时间线"
+        case .conversation: "对话"
+        case .artifacts: "产出"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .overview: "rectangle.grid.1x2"
+        case .timeline: "clock.arrow.circlepath"
+        case .conversation: "bubble.left.and.bubble.right"
+        case .artifacts: "doc"
+        }
+    }
 }
 
 private extension RunLifecycleState {

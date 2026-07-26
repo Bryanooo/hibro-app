@@ -2,6 +2,7 @@ import SwiftUI
 
 struct HomeView: View {
     @Environment(AppModel.self) private var model
+    @State private var showingComposer = false
 
     private var attentionItems: [InboxItem] {
         model.inboxItems.filter(\.requiresAttention)
@@ -30,7 +31,12 @@ struct HomeView: View {
         .navigationTitle("首页")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
+            ToolbarItemGroup(placement: .primaryAction) {
+                Button {
+                    showingComposer = true
+                } label: {
+                    Label("新任务", systemImage: "plus")
+                }
                 Button {
                     Task { await model.refreshFromUser() }
                 } label: {
@@ -42,6 +48,9 @@ struct HomeView: View {
                 }
                 .disabled(model.isWorking)
             }
+        }
+        .sheet(isPresented: $showingComposer) {
+            RunComposerSheet()
         }
         .refreshable { await model.refreshFromUser() }
     }
@@ -135,12 +144,23 @@ struct HomeView: View {
                 caption: "围绕目标查看执行进度，而不是盯着 Agent 状态"
             )
             if activeRuns.isEmpty {
-                EmptyStateView(
-                    symbol: "moon.zzz",
-                    title: "当前没有运行中的任务",
-                    message: "从运行页创建一个目标，Hibro 会安排 Agent 执行。"
-                )
-                .frame(minHeight: 160)
+                VStack(spacing: 14) {
+                    EmptyStateView(
+                        symbol: "moon.zzz",
+                        title: "当前没有运行中的任务",
+                        message: "创建一个目标，Hibro 会安排 Agent 执行。"
+                    )
+                    Button {
+                        showingComposer = true
+                    } label: {
+                        Label("开始新任务", systemImage: "plus")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(HibroTheme.accent)
+                    .foregroundStyle(.black)
+                }
+                .padding(.bottom, 18)
+                .frame(maxWidth: .infinity, minHeight: 180)
                 .hibroPanel()
             } else {
                 LazyVGrid(
@@ -214,8 +234,9 @@ struct HomeView: View {
                     .foregroundStyle(.tertiary)
             }
         }
-        .padding(16)
-        .hibroPanel()
+        .padding(.horizontal, 4)
+        .padding(.vertical, 6)
+        .accessibilityElement(children: .combine)
     }
 
     private var summary: String {

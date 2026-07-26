@@ -52,8 +52,6 @@ struct InboxView: View {
         switch filter {
         case .attention:
             model.inboxItems.filter(\.requiresAttention)
-        case .all:
-            model.inboxItems
         case .outcomes:
             model.inboxItems.filter { !$0.requiresAttention }
         }
@@ -62,7 +60,6 @@ struct InboxView: View {
     private var emptyTitle: String {
         switch filter {
         case .attention: "没有待处理事项"
-        case .all: "收件箱是空的"
         case .outcomes: "还没有完成记录"
         }
     }
@@ -70,7 +67,6 @@ struct InboxView: View {
     private var emptyMessage: String {
         switch filter {
         case .attention: "Agent 暂时不需要你的决定。"
-        case .all: "审批、Agent 问题和任务结果会集中显示在这里。"
         case .outcomes: "完成的任务会自动汇总到这里。"
         }
     }
@@ -78,7 +74,6 @@ struct InboxView: View {
 
 private enum InboxFilter: String, CaseIterable, Identifiable {
     case attention
-    case all
     case outcomes
 
     var id: String { rawValue }
@@ -86,7 +81,6 @@ private enum InboxFilter: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .attention: "待处理"
-        case .all: "全部"
         case .outcomes: "已完成"
         }
     }
@@ -136,8 +130,6 @@ struct InboxItemDetailView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     let itemID: String
-    @State private var pendingDecision: ApprovalDecision?
-    @State private var authorizationError: String?
 
     private var item: InboxItem? {
         model.inboxItems.first(where: { $0.id == itemID })
@@ -189,39 +181,6 @@ struct InboxItemDetailView: View {
         }
         .navigationTitle("事项详情")
         .navigationBarTitleDisplayMode(.inline)
-        .confirmationDialog(
-            confirmationTitle,
-            isPresented: Binding(
-                get: { pendingDecision != nil },
-                set: { if !$0 { pendingDecision = nil } }
-            ),
-            titleVisibility: .visible
-        ) {
-            if let pendingDecision {
-                Button(
-                    pendingDecision.title,
-                    role: pendingDecision == .deny ? .destructive : nil
-                ) {
-                    Task {
-                        if await submit(pendingDecision) {
-                            dismiss()
-                        }
-                    }
-                }
-            }
-            Button("取消", role: .cancel) {}
-        }
-        .alert(
-            "无法确认身份",
-            isPresented: Binding(
-                get: { authorizationError != nil },
-                set: { if !$0 { authorizationError = nil } }
-            )
-        ) {
-            Button("知道了", role: .cancel) {}
-        } message: {
-            Text(authorizationError ?? "")
-        }
     }
 
     private func identity(_ item: InboxItem) -> some View {
@@ -276,39 +235,21 @@ struct InboxItemDetailView: View {
     @ViewBuilder
     private func approvalActions(_ item: InboxItem) -> some View {
         if let approval = activity?.approval, approval.resolvable {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("做出决定")
-                    .font(.headline)
-                ForEach(supportedDecisions(approval), id: \.self) { decision in
-                    Button {
-                        pendingDecision = decision
-                    } label: {
-                        Label(
-                            decision.title,
-                            systemImage: decision == .deny
-                                ? "xmark.circle"
-                                : "checkmark.shield"
-                        )
-                        .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(decision == .deny ? HibroTheme.danger : HibroTheme.accent)
-                    .foregroundStyle(decision == .deny ? Color.white : Color.black)
-                    .disabled(model.isWorking)
-                }
-            }
-            .padding(18)
-            .hibroPanel()
+            ApprovalDecisionPanel(
+                title: item.title,
+                detail: activity?.detail ?? approval.reason,
+                decisions: supportedDecisions(approval),
+                onDecision: submit,
+                onCompleted: { dismiss() }
+            )
         } else if let approval = runApproval {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("做出决定")
-                    .font(.headline)
-                ForEach(approval.decisions, id: \.self) { decision in
-                    approvalButton(decision)
-                }
-            }
-            .padding(18)
-            .hibroPanel()
+            ApprovalDecisionPanel(
+                title: approval.title,
+                detail: approval.detail,
+                decisions: approval.decisions,
+                onDecision: submit,
+                onCompleted: { dismiss() }
+            )
         } else {
             relatedActions(item)
         }
@@ -352,33 +293,7 @@ struct InboxItemDetailView: View {
         }
     }
 
-    private func approvalButton(_ decision: ApprovalDecision) -> some View {
-        Button {
-            pendingDecision = decision
-        } label: {
-            Label(
-                decision.title,
-                systemImage: decision == .deny
-                    ? "xmark.circle"
-                    : "checkmark.shield"
-            )
-            .frame(maxWidth: .infinity)
-        }
-        .buttonStyle(.borderedProminent)
-        .tint(decision == .deny ? HibroTheme.danger : HibroTheme.accent)
-        .foregroundStyle(decision == .deny ? Color.white : Color.black)
-        .disabled(model.isWorking)
-    }
-
     private func submit(_ decision: ApprovalDecision) async -> Bool {
-        if !model.isDemoMode {
-            do {
-                try await ApprovalAuthorizer.authorize()
-            } catch {
-                authorizationError = error.localizedDescription
-                return false
-            }
-        }
         if let activity,
            let conversationID = item?.conversationID {
             return await model.decideApproval(
@@ -395,11 +310,6 @@ struct InboxItemDetailView: View {
             )
         }
         return false
-    }
-
-    private var confirmationTitle: String {
-        guard let pendingDecision else { return "确认审批决定" }
-        return "确认“\(pendingDecision.title)”？"
     }
 }
 

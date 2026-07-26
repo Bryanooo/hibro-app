@@ -230,75 +230,15 @@ struct ConversationDetailView: View {
 private struct PinnedApprovalBanner: View {
     @Environment(AppModel.self) private var model
     let activity: CoreActivity
-    @State private var authorizationError: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 9) {
-            HStack(spacing: 8) {
-                Image(systemName: "hand.raised.fill")
-                    .foregroundStyle(HibroTheme.orange)
-                Text("Agent 正在等待你的决定")
-                    .font(.subheadline.weight(.semibold))
-                Spacer()
-                Text("待审批")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(HibroTheme.orange)
-            }
-            Text(activity.title)
-                .font(.caption.weight(.semibold))
-                .lineLimit(1)
-            if let detail = activity.detail ?? activity.approval?.reason {
-                Text(detail)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-            }
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 8) {
-                    decisionButtons
-                }
-                VStack(spacing: 8) {
-                    decisionButtons
-                }
-            }
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 11)
-        .background(.regularMaterial)
-        .alert(
-            "无法确认审批",
-            isPresented: Binding(
-                get: { authorizationError != nil },
-                set: { if !$0 { authorizationError = nil } }
-            )
-        ) {
-            Button("好") { authorizationError = nil }
-        } message: {
-            Text(authorizationError ?? "")
-        }
-    }
-
-    @ViewBuilder
-    private var decisionButtons: some View {
-        ForEach(supportedDecisions, id: \.self) { decision in
-            Button {
-                Task { await submit(decision) }
-            } label: {
-                Text(shortTitle(for: decision))
-                    .font(.caption.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(
-                decision == .deny
-                    ? HibroTheme.danger
-                    : HibroTheme.accent
-            )
-            .foregroundStyle(
-                decision == .deny ? Color.white : Color.black
-            )
-            .disabled(model.isWorking)
-        }
+        ApprovalDecisionPanel(
+            title: activity.title,
+            detail: activity.detail ?? activity.approval?.reason,
+            decisions: supportedDecisions,
+            style: .compact,
+            onDecision: submit
+        )
     }
 
     private var supportedDecisions: [ApprovalDecision] {
@@ -309,24 +249,8 @@ private struct PinnedApprovalBanner: View {
         return supported.isEmpty ? ApprovalDecision.allCases : supported
     }
 
-    private func shortTitle(for decision: ApprovalDecision) -> String {
-        switch decision {
-        case .allowOnce: "仅本次"
-        case .allowAlways: "本会话"
-        case .deny: "拒绝"
-        }
-    }
-
-    private func submit(_ decision: ApprovalDecision) async {
-        if !model.isDemoMode {
-            do {
-                try await ApprovalAuthorizer.authorize()
-            } catch {
-                authorizationError = error.localizedDescription
-                return
-            }
-        }
-        _ = await model.decideApproval(
+    private func submit(_ decision: ApprovalDecision) async -> Bool {
+        await model.decideApproval(
             conversationID: activity.conversationId,
             activityID: activity.id,
             decision: decision

@@ -35,6 +35,10 @@ final class HibroUITests: XCTestCase {
         XCTAssertTrue(
             app.navigationBars["运行详情"].waitForExistence(timeout: 4)
         )
+        XCTAssertTrue(app.buttons["概览"].exists)
+        XCTAssertTrue(app.buttons["时间线"].exists)
+        XCTAssertTrue(app.buttons["对话"].exists)
+        XCTAssertTrue(app.buttons["产出"].exists)
         XCTAssertTrue(app.staticTexts["执行流程"].exists)
         XCTAssertTrue(app.staticTexts["协作"].exists)
         app.swipeUp()
@@ -137,6 +141,33 @@ final class HibroUITests: XCTestCase {
         )
         XCTAssertTrue(app.staticTexts["执行流程"].exists)
         capture("split-compact-run")
+    }
+
+    func testRunDetailInformationSections() {
+        launchApp()
+        openSection("运行")
+        app.staticTexts[
+            "整理 Hibro App 第一版需要完成的功能与优先级"
+        ].firstMatch.tap()
+        XCTAssertTrue(
+            app.navigationBars["运行详情"].waitForExistence(timeout: 4)
+        )
+
+        app.buttons["时间线"].tap()
+        XCTAssertTrue(
+            app.staticTexts["还没有运行事件"].waitForExistence(timeout: 4)
+        )
+
+        app.buttons["对话"].tap()
+        XCTAssertTrue(
+            app.staticTexts["关联对话"].waitForExistence(timeout: 4)
+        )
+
+        app.buttons["产出"].tap()
+        XCTAssertTrue(
+            app.staticTexts["还没有产出"].waitForExistence(timeout: 4)
+        )
+        capture("run-detail-sections")
     }
 
     func testRegularSplitWidthWorkflow() throws {

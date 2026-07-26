@@ -12,6 +12,14 @@ enum ApprovalDecision: String, CaseIterable, Hashable, Sendable {
         case .deny: "拒绝"
         }
     }
+
+    var shortTitle: String {
+        switch self {
+        case .allowOnce: "仅本次"
+        case .allowAlways: "本会话"
+        case .deny: "拒绝"
+        }
+    }
 }
 
 enum InboxItemKind: String, CaseIterable, Hashable, Sendable {

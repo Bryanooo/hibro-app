@@ -146,6 +146,152 @@ struct EmptyStateView: View {
     }
 }
 
+struct ApprovalDecisionPanel: View {
+    enum Style {
+        case detailed
+        case compact
+    }
+
+    @Environment(AppModel.self) private var model
+    let title: String
+    let detail: String?
+    let decisions: [ApprovalDecision]
+    let style: Style
+    let onDecision: (ApprovalDecision) async -> Bool
+    let onCompleted: () -> Void
+    @State private var pendingDecision: ApprovalDecision?
+    @State private var authorizationError: String?
+
+    init(
+        title: String,
+        detail: String? = nil,
+        decisions: [ApprovalDecision],
+        style: Style = .detailed,
+        onDecision: @escaping (ApprovalDecision) async -> Bool,
+        onCompleted: @escaping () -> Void = {}
+    ) {
+        self.title = title
+        self.detail = detail
+        self.decisions = decisions
+        self.style = style
+        self.onDecision = onDecision
+        self.onCompleted = onCompleted
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: style == .compact ? 9 : 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "hand.raised.fill")
+                    .foregroundStyle(HibroTheme.orange)
+                Text(style == .compact ? "Agent 正在等待你的决定" : "做出决定")
+                    .font(style == .compact ? .subheadline.weight(.semibold) : .headline)
+                Spacer()
+                Text("待审批")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(HibroTheme.orange)
+            }
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .lineLimit(style == .compact ? 1 : 3)
+            if let detail = detail?.nilIfBlank {
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(style == .compact ? 2 : nil)
+                    .textSelection(.enabled)
+            }
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) { decisionButtons }
+                VStack(spacing: 8) { decisionButtons }
+            }
+        }
+        .padding(style == .compact ? 12 : 18)
+        .background(
+            style == .compact
+                ? AnyShapeStyle(.regularMaterial)
+                : AnyShapeStyle(HibroTheme.panelStrong),
+            in: RoundedRectangle(cornerRadius: style == .compact ? 0 : 16)
+        )
+        .overlay {
+            if style == .detailed {
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(HibroTheme.border)
+            }
+        }
+        .confirmationDialog(
+            confirmationTitle,
+            isPresented: Binding(
+                get: { pendingDecision != nil },
+                set: { if !$0 { pendingDecision = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            if let pendingDecision {
+                Button(
+                    pendingDecision.title,
+                    role: pendingDecision == .deny ? .destructive : nil
+                ) {
+                    Task { await submit(pendingDecision) }
+                }
+            }
+            Button("取消", role: .cancel) {}
+        }
+        .alert(
+            "无法确认审批",
+            isPresented: Binding(
+                get: { authorizationError != nil },
+                set: { if !$0 { authorizationError = nil } }
+            )
+        ) {
+            Button("知道了", role: .cancel) {}
+        } message: {
+            Text(authorizationError ?? "")
+        }
+    }
+
+    @ViewBuilder
+    private var decisionButtons: some View {
+        ForEach(decisions, id: \.self) { decision in
+            Button {
+                pendingDecision = decision
+            } label: {
+                Label(
+                    style == .compact ? decision.shortTitle : decision.title,
+                    systemImage: decision == .deny
+                        ? "xmark.circle"
+                        : "checkmark.shield"
+                )
+                .font(style == .compact ? .caption.weight(.semibold) : .body)
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(decision == .deny ? HibroTheme.danger : HibroTheme.accent)
+            .foregroundStyle(decision == .deny ? Color.white : Color.black)
+            .disabled(model.isWorking)
+        }
+    }
+
+    private func submit(_ decision: ApprovalDecision) async {
+        pendingDecision = nil
+        if !model.isDemoMode {
+            do {
+                try await ApprovalAuthorizer.authorize()
+            } catch {
+                authorizationError = error.localizedDescription
+                return
+            }
+        }
+        if await onDecision(decision) {
+            onCompleted()
+        }
+    }
+
+    private var confirmationTitle: String {
+        guard let pendingDecision else { return "确认审批决定" }
+        return "确认“\(pendingDecision.title)”？"
+    }
+}
+
 enum DateText {
     static func date(from value: String?) -> Date? {
         guard let value else { return nil }

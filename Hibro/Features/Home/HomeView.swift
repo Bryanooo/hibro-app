@@ -69,8 +69,8 @@ struct HomeView: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            Button {
-                model.section = .inbox
+            NavigationLink {
+                InboxView()
             } label: {
                 VStack(spacing: 3) {
                     Text("\(attentionItems.count)")
@@ -99,7 +99,9 @@ struct HomeView: View {
                     caption: "审批、问题和失败任务集中在这里"
                 )
                 if !attentionItems.isEmpty {
-                    Button("查看全部") { model.section = .inbox }
+                    NavigationLink("查看全部") {
+                        InboxView()
+                    }
                         .font(.subheadline.weight(.semibold))
                 }
             }

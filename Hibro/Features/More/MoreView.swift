@@ -7,14 +7,14 @@ struct MoreView: View {
         List {
             Section("协作资源") {
                 NavigationLink {
-                    ConversationsView()
+                    InboxView()
                 } label: {
                     ResourceRow(
-                        title: "对话",
-                        caption: "在任务上下文中继续与 Agent 沟通",
-                        symbol: "bubble.left.and.bubble.right",
-                        color: HibroTheme.cyan,
-                        count: model.conversations.count
+                        title: "收件箱",
+                        caption: "查看待处理事项和最近完成记录",
+                        symbol: "tray",
+                        color: HibroTheme.orange,
+                        count: model.inboxItems.filter(\.requiresAttention).count
                     )
                 }
                 NavigationLink {

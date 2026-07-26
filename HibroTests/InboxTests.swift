@@ -22,6 +22,31 @@ final class InboxTests: XCTestCase {
         XCTAssertEqual(defaultOwner.greetingName, "Bryan")
     }
 
+    func testConversationGroupsTechnicalActivitiesWithoutHidingDecisions() throws {
+        let detail = try XCTUnwrap(
+            DemoData.conversationDetail(id: "conv_demo_plan")
+        )
+        let groups = detail.focusedTimeline.compactMap { item -> [CoreActivity]? in
+            guard case .technicalActivities(let activities) = item else {
+                return nil
+            }
+            return activities
+        }
+
+        XCTAssertEqual(groups.count, 1)
+        XCTAssertEqual(groups.first?.map(\.type), [
+            "thinking",
+            "tool_call",
+            "tool_result",
+        ])
+        XCTAssertTrue(
+            detail.focusedTimeline.contains {
+                guard case .activity(let activity) = $0 else { return false }
+                return activity.type == "question"
+            }
+        )
+    }
+
     func testInboxPrioritizesAttentionOverCompletedRuns() {
         let items = InboxBuilder.build(
             runs: DemoData.runs,

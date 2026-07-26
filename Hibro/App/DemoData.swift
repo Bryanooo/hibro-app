@@ -206,7 +206,7 @@ enum DemoData {
         Dictionary(
             uniqueKeysWithValues: conversations.map { conversation in
                 let isPlanning = conversation.id == "conv_demo_plan"
-                let activity = isPlanning
+                let focalActivity = isPlanning
                     ? CoreActivity(
                         id: "activity_demo_question",
                         conversationId: conversation.id,
@@ -243,6 +243,50 @@ enum DemoData {
                         createdAt: now,
                         updatedAt: now
                     )
+                let technicalActivities = [
+                    CoreActivity(
+                        id: "activity_demo_thinking_\(conversation.id)",
+                        conversationId: conversation.id,
+                        messageId: nil,
+                        runId: isPlanning ? "run_demo_active" : "run_demo_done",
+                        type: "thinking",
+                        status: "completed",
+                        title: "分析任务上下文",
+                        detail: "读取当前项目状态并梳理下一步计划。",
+                        payload: nil,
+                        approval: nil,
+                        createdAt: earlier,
+                        updatedAt: earlier
+                    ),
+                    CoreActivity(
+                        id: "activity_demo_tool_call_\(conversation.id)",
+                        conversationId: conversation.id,
+                        messageId: nil,
+                        runId: isPlanning ? "run_demo_active" : "run_demo_done",
+                        type: "tool_call",
+                        status: "completed",
+                        title: "读取项目文件",
+                        detail: "检查配置、实现和测试状态。",
+                        payload: nil,
+                        approval: nil,
+                        createdAt: earlier,
+                        updatedAt: earlier
+                    ),
+                    CoreActivity(
+                        id: "activity_demo_tool_result_\(conversation.id)",
+                        conversationId: conversation.id,
+                        messageId: nil,
+                        runId: isPlanning ? "run_demo_active" : "run_demo_done",
+                        type: "tool_result",
+                        status: "completed",
+                        title: "项目文件读取完成",
+                        detail: "已获得生成结论所需的上下文。",
+                        payload: nil,
+                        approval: nil,
+                        createdAt: earlier,
+                        updatedAt: earlier
+                    ),
+                ]
                 let detail = ConversationDetail(
                     conversation: conversation,
                     messages: [
@@ -277,7 +321,7 @@ enum DemoData {
                             updatedAt: now
                         )
                     ],
-                    activities: [activity]
+                    activities: technicalActivities + [focalActivity]
                 )
                 return (conversation.id, detail)
             }

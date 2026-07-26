@@ -12,7 +12,7 @@ struct AppShellView: View {
     @State private var preferredCompactColumn = NavigationSplitViewColumn.detail
     @State private var widePath = NavigationPath()
     @State private var homePath = NavigationPath()
-    @State private var inboxPath = NavigationPath()
+    @State private var conversationsPath = NavigationPath()
     @State private var runsPath = NavigationPath()
     @State private var morePath = NavigationPath()
 
@@ -39,7 +39,7 @@ struct AppShellView: View {
             }
         }
         .onChange(of: model.selectedConversationID) {
-            guard model.section == .more,
+            guard model.section == .conversations,
                   let id = model.selectedConversationID
             else { return }
             show(.conversation(id))
@@ -51,8 +51,7 @@ struct AppShellView: View {
             show(.run(id))
         }
         .onChange(of: model.selectedInboxItemID) {
-            guard model.section == .inbox,
-                  let id = model.selectedInboxItemID
+            guard let id = model.selectedInboxItemID
             else { return }
             show(.inbox(id))
         }
@@ -101,8 +100,8 @@ struct AppShellView: View {
             compactTab(.home, path: $homePath) {
                 HomeView()
             }
-            compactTab(.inbox, path: $inboxPath) {
-                InboxView()
+            compactTab(.conversations, path: $conversationsPath) {
+                ConversationsView()
             }
             compactTab(.runs, path: $runsPath) {
                 RunsView()
@@ -118,7 +117,7 @@ struct AppShellView: View {
             List {
                 Section("工作") {
                     navigationRow(.home)
-                    navigationRow(.inbox)
+                    navigationRow(.conversations)
                     navigationRow(.runs)
                 }
                 Section("资源") {
@@ -154,17 +153,6 @@ struct AppShellView: View {
             HStack {
                 Label(section.title, systemImage: section.symbol)
                 Spacer()
-                if section == .inbox {
-                    let count = model.inboxItems.filter(\.requiresAttention).count
-                    if count > 0 {
-                        Text("\(count)")
-                            .font(.caption2.bold())
-                            .foregroundStyle(.black)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 3)
-                            .background(HibroTheme.orange, in: Capsule())
-                    }
-                }
             }
             .contentShape(Rectangle())
         }
@@ -214,7 +202,7 @@ struct AppShellView: View {
     private func sectionContent(_ section: AppSection) -> some View {
         switch section {
         case .home: HomeView()
-        case .inbox: InboxView()
+        case .conversations: ConversationsView()
         case .runs: RunsView()
         case .more: MoreView()
         }
@@ -238,9 +226,9 @@ struct AppShellView: View {
             case .home:
                 homePath = NavigationPath()
                 homePath.append(route)
-            case .inbox:
-                inboxPath = NavigationPath()
-                inboxPath.append(route)
+            case .conversations:
+                conversationsPath = NavigationPath()
+                conversationsPath.append(route)
             case .runs:
                 runsPath = NavigationPath()
                 runsPath.append(route)

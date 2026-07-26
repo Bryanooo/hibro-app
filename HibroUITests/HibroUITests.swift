@@ -14,7 +14,7 @@ final class HibroUITests: XCTestCase {
             app.staticTexts["需要你的决定"].waitForExistence(timeout: 8)
         )
 
-        openSection("收件箱")
+        openInbox()
         XCTAssertTrue(
             app.navigationBars["收件箱"].waitForExistence(timeout: 4)
         )
@@ -23,6 +23,7 @@ final class HibroUITests: XCTestCase {
             app.navigationBars["事项详情"].waitForExistence(timeout: 4)
         )
         XCTAssertTrue(app.staticTexts["做出决定"].exists)
+        goBack()
         goBack()
 
         openSection("运行")
@@ -81,7 +82,7 @@ final class HibroUITests: XCTestCase {
         XCTAssertTrue(
             app.staticTexts["需要你的决定"].waitForExistence(timeout: 8)
         )
-        openSection("收件箱")
+        openInbox()
         XCTAssertTrue(
             app.navigationBars["收件箱"].waitForExistence(timeout: 4)
         )
@@ -101,7 +102,7 @@ final class HibroUITests: XCTestCase {
         )
         capture("dark-home")
 
-        openSection("收件箱")
+        openInbox()
         app.staticTexts["部署 Core 更新"].firstMatch.tap()
         XCTAssertTrue(
             app.staticTexts["做出决定"].waitForExistence(timeout: 4)
@@ -126,7 +127,7 @@ final class HibroUITests: XCTestCase {
         )
         capture("light-home")
 
-        openSection("收件箱")
+        openInbox()
         app.staticTexts["部署 Core 更新"].firstMatch.tap()
         XCTAssertTrue(
             app.staticTexts["做出决定"].waitForExistence(timeout: 4)
@@ -137,7 +138,7 @@ final class HibroUITests: XCTestCase {
 
     func testInboxQuestionSupportsQuickReply() {
         launchApp()
-        openSection("收件箱")
+        openInbox()
         app.staticTexts["是否保留 v1 API 兼容性？"].firstMatch.tap()
         XCTAssertTrue(
             app.staticTexts["直接回复 Agent"].waitForExistence(timeout: 4)
@@ -154,8 +155,7 @@ final class HibroUITests: XCTestCase {
 
     func testConversationPinsApprovalAboveComposer() {
         launchApp()
-        openSection("更多")
-        app.staticTexts["对话"].firstMatch.tap()
+        openSection("对话")
         XCTAssertTrue(
             app.navigationBars["对话"].waitForExistence(timeout: 4)
         )
@@ -168,6 +168,31 @@ final class HibroUITests: XCTestCase {
         XCTAssertTrue(app.buttons["仅本次"].isHittable)
         XCTAssertTrue(app.buttons["本会话"].isHittable)
         XCTAssertTrue(app.buttons["拒绝"].isHittable)
+    }
+
+    func testConversationCollapsesTechnicalDetailsByDefault() {
+        launchApp()
+        openSection("对话")
+        app.staticTexts["整理 Hibro 产品计划"].firstMatch.tap()
+
+        let details = app.buttons["conversation.technicalDetails"]
+        XCTAssertTrue(details.waitForExistence(timeout: 4))
+        XCTAssertTrue(details.label.contains("技术细节 · 3 项"))
+        XCTAssertFalse(app.staticTexts["读取项目文件"].exists)
+        capture("conversation-details-collapsed")
+
+        details.tap()
+        XCTAssertTrue(
+            app.staticTexts["读取项目文件"].waitForExistence(timeout: 4)
+        )
+        XCTAssertTrue(app.staticTexts["项目文件读取完成"].exists)
+        capture("conversation-details-expanded")
+
+        goBack()
+        XCTAssertTrue(
+            app.navigationBars["对话"].waitForExistence(timeout: 4)
+        )
+        XCTAssertTrue(app.staticTexts["整理 Hibro 产品计划"].firstMatch.exists)
     }
 
     func testCompactSplitWidthWorkflow() throws {
@@ -207,7 +232,7 @@ final class HibroUITests: XCTestCase {
             app.staticTexts["还没有运行事件"].waitForExistence(timeout: 4)
         )
 
-        app.buttons["对话"].tap()
+        app.segmentedControls["run-detail-sections"].buttons["对话"].tap()
         XCTAssertTrue(
             app.staticTexts["关联对话"].waitForExistence(timeout: 4)
         )
@@ -230,7 +255,7 @@ final class HibroUITests: XCTestCase {
         XCTAssertFalse(app.tabBars.firstMatch.exists)
         capture("split-regular-home")
 
-        openSection("收件箱")
+        openInbox()
         XCTAssertTrue(
             app.navigationBars["收件箱"].waitForExistence(timeout: 4)
         )
@@ -292,6 +317,13 @@ final class HibroUITests: XCTestCase {
             "找不到导航入口：\(label)"
         )
         sidebarLabel.tap()
+    }
+
+    private func openInbox() {
+        openSection("更多")
+        let inbox = app.staticTexts["收件箱"].firstMatch
+        XCTAssertTrue(inbox.waitForExistence(timeout: 4))
+        inbox.tap()
     }
 
     private func goBack() {

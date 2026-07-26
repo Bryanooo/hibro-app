@@ -452,6 +452,23 @@ enum TimelineItem: Identifiable, Hashable {
     }
 }
 
+enum ConversationDisplayItem: Identifiable, Hashable {
+    case message(CoreMessage)
+    case activity(CoreActivity)
+    case technicalActivities([CoreActivity])
+
+    var id: String {
+        switch self {
+        case .message(let value):
+            "message:\(value.id)"
+        case .activity(let value):
+            "activity:\(value.id)"
+        case .technicalActivities(let values):
+            "technical:\(values.first?.id ?? "empty"):\(values.last?.id ?? "empty")"
+        }
+    }
+}
+
 extension ConversationDetail {
     var timeline: [TimelineItem] {
         (
@@ -459,5 +476,37 @@ extension ConversationDetail {
             activities.map(TimelineItem.activity)
         )
         .sorted { $0.createdAt < $1.createdAt }
+    }
+
+    var focusedTimeline: [ConversationDisplayItem] {
+        var result: [ConversationDisplayItem] = []
+        var technicalActivities: [CoreActivity] = []
+
+        func flushTechnicalActivities() {
+            guard !technicalActivities.isEmpty else { return }
+            result.append(.technicalActivities(technicalActivities))
+            technicalActivities.removeAll(keepingCapacity: true)
+        }
+
+        for item in timeline {
+            switch item {
+            case .activity(let activity) where activity.isTechnicalDetail:
+                technicalActivities.append(activity)
+            case .message(let message):
+                flushTechnicalActivities()
+                result.append(.message(message))
+            case .activity(let activity):
+                flushTechnicalActivities()
+                result.append(.activity(activity))
+            }
+        }
+        flushTechnicalActivities()
+        return result
+    }
+}
+
+extension CoreActivity {
+    var isTechnicalDetail: Bool {
+        ["thinking", "tool_call", "tool_result"].contains(type)
     }
 }

@@ -134,12 +134,14 @@ struct ConversationDetailView: View {
             ScrollView {
                 LazyVStack(spacing: 13) {
                     ConversationIdentityCard(conversation: detail.conversation)
-                    ForEach(detail.timeline) { item in
+                    ForEach(detail.focusedTimeline) { item in
                         switch item {
                         case .message(let message):
                             MessageBubble(message: message)
                         case .activity(let activity):
                             ActivityCard(activity: activity)
+                        case .technicalActivities(let activities):
+                            TechnicalActivityGroup(activities: activities)
                         }
                     }
                 }
@@ -147,13 +149,13 @@ struct ConversationDetailView: View {
                 .frame(maxWidth: 820)
                 .frame(maxWidth: .infinity)
             }
-            .onChange(of: detail.timeline.count) {
-                if let last = detail.timeline.last {
+            .onChange(of: detail.focusedTimeline.count) {
+                if let last = detail.focusedTimeline.last {
                     withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
                 }
             }
             .onAppear {
-                guard let last = detail.timeline.last else { return }
+                guard let last = detail.focusedTimeline.last else { return }
                 Task { @MainActor in
                     await Task.yield()
                     proxy.scrollTo(last.id, anchor: .bottom)
@@ -331,6 +333,46 @@ private struct MessageBubble: View {
             if message.role != "user" { Spacer(minLength: 45) }
         }
         .id("message:\(message.id)")
+    }
+}
+
+private struct TechnicalActivityGroup: View {
+    let activities: [CoreActivity]
+    @State private var isExpanded = false
+
+    var body: some View {
+        DisclosureGroup(isExpanded: $isExpanded) {
+            VStack(spacing: 8) {
+                ForEach(activities) { activity in
+                    ActivityCard(activity: activity)
+                }
+            }
+            .padding(.top, 9)
+        } label: {
+            HStack(spacing: 9) {
+                Image(systemName: "wrench.and.screwdriver")
+                    .foregroundStyle(HibroTheme.cyan)
+                Text("技术细节 · \(activities.count) 项")
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                Text(isExpanded ? "收起" : "展开")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .contentShape(Rectangle())
+        }
+        .tint(HibroTheme.cyan)
+        .padding(12)
+        .background(
+            HibroTheme.cyan.opacity(0.055),
+            in: RoundedRectangle(cornerRadius: 13)
+        )
+        .frame(maxWidth: 690)
+        .id(
+            "technical:\(activities.first?.id ?? "empty"):"
+                + "\(activities.last?.id ?? "empty")"
+        )
+        .accessibilityIdentifier("conversation.technicalDetails")
     }
 }
 

@@ -43,7 +43,7 @@ enum AppAppearance: String, CaseIterable, Identifiable {
 
 enum AppSection: String, CaseIterable, Identifiable {
     case home
-    case inbox
+    case conversations
     case runs
     case more
 
@@ -52,7 +52,7 @@ enum AppSection: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .home: "首页"
-        case .inbox: "收件箱"
+        case .conversations: "对话"
         case .runs: "运行"
         case .more: "更多"
         }
@@ -61,7 +61,7 @@ enum AppSection: String, CaseIterable, Identifiable {
     var symbol: String {
         switch self {
         case .home: "house"
-        case .inbox: "tray"
+        case .conversations: "bubble.left.and.bubble.right"
         case .runs: "play.circle"
         case .more: "ellipsis.circle"
         }
@@ -727,11 +727,11 @@ final class AppModel {
                let id {
                 Task {
                     await openConversation(id)
-                    section = .inbox
+                    section = .home
                     selectedInboxItemID = "activity:\(activityID)"
                 }
             } else {
-                section = .more
+                section = .conversations
                 if let id { Task { await openConversation(id) } }
             }
         case "runs":
@@ -739,7 +739,7 @@ final class AppModel {
                let id {
                 Task {
                     await openRun(id)
-                    section = .inbox
+                    section = .home
                     selectedInboxItemID = "run-approval:\(id):\(approvalID)"
                 }
             } else {
@@ -749,7 +749,7 @@ final class AppModel {
         case "artifacts":
             section = .more
         case "inbox":
-            section = .inbox
+            section = .home
             selectedInboxItemID = id
         case "team-runs", "nodes":
             section = .more

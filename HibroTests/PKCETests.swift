@@ -2,6 +2,40 @@ import XCTest
 @testable import Hibro
 
 final class PKCETests: XCTestCase {
+    func testLiveDockerCoreCompatibility() async throws {
+        let environment = ProcessInfo.processInfo.environment
+        guard let address = environment["HIBRO_QA_CORE_URL"],
+              let baseURL = URL(string: address),
+              let accessToken = environment["HIBRO_QA_ACCESS_TOKEN"],
+              let refreshToken = environment["HIBRO_QA_REFRESH_TOKEN"]
+        else {
+            throw XCTSkip(
+                "设置 HIBRO_QA_CORE_URL 和临时 OAuth Token 后运行本地 Docker 集成测试"
+            )
+        }
+
+        let api = CoreAPI()
+        await api.configure(
+            baseURL: baseURL,
+            tokens: OAuthTokenSet(
+                accessToken: accessToken,
+                refreshToken: refreshToken,
+                tokenType: "Bearer",
+                expiresAt: Date().addingTimeInterval(600),
+                scope: "hibro.read hibro.run"
+            )
+        )
+
+        let bootstrap = try await api.bootstrap()
+        let inbox = try await api.inbox()
+        let runs = try await api.runs()
+
+        XCTAssertEqual(bootstrap.apiVersion, "2026-07-25")
+        XCTAssertEqual(bootstrap.user.username, "qa-owner")
+        XCTAssertTrue(inbox.isEmpty)
+        XCTAssertTrue(runs.isEmpty)
+    }
+
     func testRFC7636Challenge() {
         let verifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
         XCTAssertEqual(

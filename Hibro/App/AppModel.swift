@@ -47,6 +47,7 @@ final class AppModel {
     var runEventsByID: [String: [CoreRunEvent]] = [:]
     var conversationDetail: ConversationDetail?
     var conversationDetailsByID: [String: ConversationDetail] = [:]
+    var serverInboxItems: [InboxItem]?
     var selectedConversationID: String?
     var highlightedRunID: String?
     var selectedInboxItemID: String?
@@ -90,7 +91,22 @@ final class AppModel {
     var teams: [CoreTeam] { bootstrap?.teams ?? [] }
     var conversations: [CoreConversation] { bootstrap?.conversations ?? [] }
     var inboxItems: [InboxItem] {
-        InboxBuilder.build(
+        if let serverInboxItems {
+            return serverInboxItems.filter { item in
+                switch item.approvalSource {
+                case .conversation(let activityID):
+                    return !handledActivityIDs.contains(activityID)
+                case .run(let externalID):
+                    guard let runID = item.runID else { return true }
+                    return !handledRunApprovalIDs.contains(
+                        "\(runID):\(externalID)"
+                    )
+                case nil:
+                    return true
+                }
+            }
+        }
+        return InboxBuilder.build(
             runs: runs,
             conversationDetails: Array(conversationDetailsByID.values),
             runEvents: runEventsByID,
@@ -178,19 +194,45 @@ final class AppModel {
         async let bootstrapRequest = api.bootstrap()
         async let runRequest = api.runs()
         async let artifactRequest = api.artifacts()
+        async let inboxRequest: [CoreInboxItem]? = try? await api.inbox()
         let (newBootstrap, newRuns, newArtifacts) = try await (
             bootstrapRequest,
             runRequest,
             artifactRequest
         )
+        let newInbox = await inboxRequest
         bootstrap = newBootstrap
         runs = newRuns.sorted { $0.updatedAt > $1.updatedAt }
         artifacts = newArtifacts.sorted { $0.createdAt > $1.createdAt }
-        // Approval requests are authoritative Run events. Some engines can
-        // finish or fail the Run record while an approval remains unresolved,
-        // so Inbox discovery must not be limited to top-level active statuses.
-        await refreshRunEvents(for: newRuns)
-        await refreshInboxContext(conversations: newBootstrap.conversations)
+        serverInboxItems = newInbox?.compactMap(InboxItem.init(coreItem:))
+
+        if let serverInboxItems {
+            let approvalRunIDs: Set<String> = Set(
+                serverInboxItems.compactMap { item -> String? in
+                    guard let source = item.approvalSource else { return nil }
+                    switch source {
+                    case .run:
+                        return item.runID
+                    case .conversation:
+                        return nil
+                    }
+                }
+            )
+            await refreshRunEvents(
+                for: newRuns.filter { approvalRunIDs.contains($0.id) }
+            )
+            await refreshInboxContext(
+                conversations: newBootstrap.conversations,
+                requiredIDs: Set(serverInboxItems.compactMap(\.conversationID))
+            )
+        } else {
+            // Older Core versions do not expose /v1/app/inbox. Keep the
+            // on-device aggregator so existing deployments remain usable.
+            await refreshRunEvents(for: newRuns)
+            await refreshInboxContext(
+                conversations: newBootstrap.conversations
+            )
+        }
         #if DEBUG
         let statuses = Dictionary(grouping: newRuns, by: \.status)
             .mapValues(\.count)
@@ -347,6 +389,15 @@ final class AppModel {
         }
     }
 
+    func retryRun(_ run: CoreRun) async -> Bool {
+        await createRun(
+            agentID: run.agentId,
+            prompt: run.prompt,
+            sessionKey: run.sessionKey,
+            freshSession: false
+        )
+    }
+
     func cancelRun(_ id: String) async {
         guard !isDemoMode else { return }
         do {
@@ -481,6 +532,7 @@ final class AppModel {
         runEventsByID = [:]
         conversationDetail = nil
         conversationDetailsByID = [:]
+        serverInboxItems = nil
         handledActivityIDs = []
         handledRunApprovalIDs = []
         conversationSequences = [:]
@@ -501,6 +553,7 @@ final class AppModel {
         )
         runEventsByID = [:]
         conversationDetailsByID = DemoData.conversationDetails
+        serverInboxItems = nil
         handledActivityIDs = []
         handledRunApprovalIDs = []
         lastRefreshAt = Date()
@@ -683,9 +736,15 @@ final class AppModel {
     }
 
     private func refreshInboxContext(
-        conversations: [CoreConversation]
+        conversations: [CoreConversation],
+        requiredIDs: Set<String>? = nil
     ) async {
+        var includedIDs = requiredIDs
+        if let selectedConversationID {
+            includedIDs?.insert(selectedConversationID)
+        }
         let candidates = conversations
+            .filter { includedIDs?.contains($0.id) ?? true }
             .sorted { $0.updatedAt > $1.updatedAt }
         let api = self.api
         let details = await withTaskGroup(

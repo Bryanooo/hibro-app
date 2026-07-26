@@ -56,6 +56,48 @@ struct InboxItem: Identifiable, Hashable, Sendable {
     var requiresAttention: Bool { kind.requiresAttention }
 }
 
+extension InboxItem {
+    init?(coreItem: CoreInboxItem) {
+        let kind: InboxItemKind
+        switch coreItem.kind {
+        case "approval": kind = .approval
+        case "question": kind = .question
+        case "run_failed": kind = .runFailed
+        case "completed": kind = .completed
+        default: return nil
+        }
+
+        let approvalSource: InboxApprovalSource?
+        switch coreItem.approval?.source {
+        case "conversation":
+            if let activityID = coreItem.approval?.activityId {
+                approvalSource = .conversation(activityID: activityID)
+            } else {
+                approvalSource = nil
+            }
+        case "run":
+            if let externalID = coreItem.approval?.externalId {
+                approvalSource = .run(externalID: externalID)
+            } else {
+                approvalSource = nil
+            }
+        default:
+            approvalSource = nil
+        }
+
+        self.init(
+            id: coreItem.id,
+            kind: kind,
+            title: coreItem.title,
+            summary: coreItem.summary,
+            createdAt: coreItem.createdAt,
+            runID: coreItem.runId,
+            conversationID: coreItem.conversationId,
+            approvalSource: approvalSource
+        )
+    }
+}
+
 enum InboxApprovalSource: Hashable, Sendable {
     case conversation(activityID: String)
     case run(externalID: String)

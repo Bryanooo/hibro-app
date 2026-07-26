@@ -104,7 +104,13 @@ struct ConversationDetailView: View {
         .safeAreaInset(edge: .bottom) {
             if let detail = model.conversationDetail,
                detail.conversation.id == conversationID {
-                composer(detail)
+                VStack(spacing: 0) {
+                    if let activity = pendingApproval(in: detail) {
+                        PinnedApprovalBanner(activity: activity)
+                        Divider()
+                    }
+                    composer(detail)
+                }
             }
         }
         .toolbar {
@@ -204,6 +210,128 @@ struct ConversationDetailView: View {
         .padding(.bottom, 6)
         .background(.ultraThinMaterial)
     }
+
+    private func pendingApproval(
+        in detail: ConversationDetail
+    ) -> CoreActivity? {
+        detail.activities
+            .filter {
+                $0.type == "approval"
+                    && $0.status == "pending"
+                    && $0.approval?.resolvable == true
+                    && $0.approval?.decision == nil
+                    && !model.handledActivityIDs.contains($0.id)
+            }
+            .sorted { $0.createdAt < $1.createdAt }
+            .first
+    }
+}
+
+private struct PinnedApprovalBanner: View {
+    @Environment(AppModel.self) private var model
+    let activity: CoreActivity
+    @State private var authorizationError: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            HStack(spacing: 8) {
+                Image(systemName: "hand.raised.fill")
+                    .foregroundStyle(HibroTheme.orange)
+                Text("Agent 正在等待你的决定")
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                Text("待审批")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(HibroTheme.orange)
+            }
+            Text(activity.title)
+                .font(.caption.weight(.semibold))
+                .lineLimit(1)
+            if let detail = activity.detail ?? activity.approval?.reason {
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) {
+                    decisionButtons
+                }
+                VStack(spacing: 8) {
+                    decisionButtons
+                }
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .background(.regularMaterial)
+        .alert(
+            "无法确认审批",
+            isPresented: Binding(
+                get: { authorizationError != nil },
+                set: { if !$0 { authorizationError = nil } }
+            )
+        ) {
+            Button("好") { authorizationError = nil }
+        } message: {
+            Text(authorizationError ?? "")
+        }
+    }
+
+    @ViewBuilder
+    private var decisionButtons: some View {
+        ForEach(supportedDecisions, id: \.self) { decision in
+            Button {
+                Task { await submit(decision) }
+            } label: {
+                Text(shortTitle(for: decision))
+                    .font(.caption.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(
+                decision == .deny
+                    ? HibroTheme.danger
+                    : HibroTheme.accent
+            )
+            .foregroundStyle(
+                decision == .deny ? Color.white : Color.black
+            )
+            .disabled(model.isWorking)
+        }
+    }
+
+    private var supportedDecisions: [ApprovalDecision] {
+        guard let approval = activity.approval else { return [] }
+        let supported = ApprovalDecision.allCases.filter {
+            approval.decisions.contains($0.rawValue)
+        }
+        return supported.isEmpty ? ApprovalDecision.allCases : supported
+    }
+
+    private func shortTitle(for decision: ApprovalDecision) -> String {
+        switch decision {
+        case .allowOnce: "仅本次"
+        case .allowAlways: "本会话"
+        case .deny: "拒绝"
+        }
+    }
+
+    private func submit(_ decision: ApprovalDecision) async {
+        if !model.isDemoMode {
+            do {
+                try await ApprovalAuthorizer.authorize()
+            } catch {
+                authorizationError = error.localizedDescription
+                return
+            }
+        }
+        _ = await model.decideApproval(
+            conversationID: activity.conversationId,
+            activityID: activity.id,
+            decision: decision
+        )
+    }
 }
 
 private struct ConversationIdentityCard: View {
@@ -285,7 +413,6 @@ private struct MessageBubble: View {
 private struct ActivityCard: View {
     @Environment(AppModel.self) private var model
     let activity: CoreActivity
-    @State private var authorizationError: String?
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -317,34 +444,13 @@ private struct ActivityCard: View {
                     .font(.caption2)
                     .foregroundStyle(HibroTheme.orange)
                 }
-                if let approval = pendingApproval {
-                    Divider()
-                    Text("需要你的决定")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(HibroTheme.orange)
-                    ForEach(supportedDecisions(approval), id: \.self) { decision in
-                        Button {
-                            Task { await submit(decision) }
-                        } label: {
-                            Label(
-                                decision.title,
-                                systemImage: decision == .deny
-                                    ? "xmark.circle"
-                                    : "checkmark.shield"
-                            )
-                            .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(
-                            decision == .deny
-                                ? HibroTheme.danger
-                                : HibroTheme.accent
-                        )
-                        .foregroundStyle(
-                            decision == .deny ? Color.white : Color.black
-                        )
-                        .disabled(model.isWorking)
-                    }
+                if pendingApproval {
+                    Label(
+                        "等待你的决定（操作区已固定在底部）",
+                        systemImage: "arrow.down.circle"
+                    )
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(HibroTheme.orange)
                 } else if activity.type == "approval",
                           let decision = activity.approval?.decision {
                     Label(
@@ -368,53 +474,18 @@ private struct ActivityCard: View {
         .background(color.opacity(0.055), in: RoundedRectangle(cornerRadius: 13))
         .frame(maxWidth: 690)
         .id("activity:\(activity.id)")
-        .alert(
-            "无法确认审批",
-            isPresented: Binding(
-                get: { authorizationError != nil },
-                set: { if !$0 { authorizationError = nil } }
-            )
-        ) {
-            Button("好") { authorizationError = nil }
-        } message: {
-            Text(authorizationError ?? "")
-        }
     }
 
-    private var pendingApproval: CoreApproval? {
+    private var pendingApproval: Bool {
         guard activity.type == "approval",
               activity.status == "pending",
               let approval = activity.approval,
               approval.resolvable,
               approval.decision == nil,
               !model.handledActivityIDs.contains(activity.id) else {
-            return nil
+            return false
         }
-        return approval
-    }
-
-    private func supportedDecisions(
-        _ approval: CoreApproval
-    ) -> [ApprovalDecision] {
-        ApprovalDecision.allCases.filter {
-            approval.decisions.contains($0.rawValue)
-        }
-    }
-
-    private func submit(_ decision: ApprovalDecision) async {
-        if !model.isDemoMode {
-            do {
-                try await ApprovalAuthorizer.authorize()
-            } catch {
-                authorizationError = error.localizedDescription
-                return
-            }
-        }
-        _ = await model.decideApproval(
-            conversationID: activity.conversationId,
-            activityID: activity.id,
-            decision: decision
-        )
+        return true
     }
 
     private var symbol: String {

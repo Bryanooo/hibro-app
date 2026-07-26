@@ -106,8 +106,10 @@ private struct RunRow: View {
 
 struct RunDetailView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
     let runID: String
     @State private var confirmingCancel = false
+    @State private var confirmingRetry = false
 
     private var run: CoreRun? {
         model.runs.first(where: { $0.id == runID })
@@ -166,12 +168,18 @@ struct RunDetailView: View {
         .navigationTitle("运行详情")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if let run, run.isActive {
-                ToolbarItem(placement: .primaryAction) {
+            ToolbarItem(placement: .primaryAction) {
+                if let run, run.isActive {
                     Button(role: .destructive) {
                         confirmingCancel = true
                     } label: {
                         Label("取消", systemImage: "stop.fill")
+                    }
+                } else if let run, run.canRetry {
+                    Button {
+                        confirmingRetry = true
+                    } label: {
+                        Label("重试", systemImage: "arrow.clockwise")
                     }
                 }
             }
@@ -190,6 +198,23 @@ struct RunDetailView: View {
             Button("继续运行", role: .cancel) {}
         } message: {
             Text("Agent 当前正在执行的工作会被取消。")
+        }
+        .confirmationDialog(
+            "使用相同目标重新运行？",
+            isPresented: $confirmingRetry,
+            titleVisibility: .visible
+        ) {
+            Button("重新运行") {
+                guard let run else { return }
+                Task {
+                    if await model.retryRun(run) {
+                        dismiss()
+                    }
+                }
+            }
+            Button("取消", role: .cancel) {}
+        } message: {
+            Text("将沿用原来的 Agent、目标和会话设置，创建一次新的运行。")
         }
     }
 
@@ -397,9 +422,34 @@ struct RunDetailView: View {
                 .padding(18)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .hibroPanel()
+            } else if let failure = run.failurePresentation {
+                VStack(alignment: .leading, spacing: 10) {
+                    Label(
+                        failure.title,
+                        systemImage: "exclamationmark.triangle.fill"
+                    )
+                    .font(.headline)
+                    .foregroundStyle(HibroTheme.danger)
+                    Text(failure.message)
+                    Text(failure.suggestion)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Button {
+                        confirmingRetry = true
+                    } label: {
+                        Label("使用相同目标重试", systemImage: "arrow.clockwise")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(HibroTheme.accent)
+                    .foregroundStyle(.black)
+                    .disabled(model.isWorking)
+                }
+                .padding(18)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .hibroPanel()
             } else {
-                Text(runErrorMessage(run) ?? "这次运行没有返回可展示的文本结果。")
-                    .foregroundStyle(run.status == "completed" ? .secondary : HibroTheme.danger)
+                Text("这次运行没有返回可展示的文本结果。")
+                    .foregroundStyle(.secondary)
                     .padding(18)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .hibroPanel()
@@ -462,6 +512,10 @@ struct RunDetailView: View {
                 if let key = run.sessionKey {
                     LabeledContent("会话键", value: key)
                 }
+                if let failure = run.failurePresentation,
+                   let detail = failure.technicalDetail {
+                    LabeledContent("原始错误", value: detail)
+                }
             }
             .font(.caption)
             .padding(.top, 12)
@@ -474,13 +528,6 @@ struct RunDetailView: View {
         .hibroPanel()
     }
 
-    private func runErrorMessage(_ run: CoreRun) -> String? {
-        guard let error = run.error else { return nil }
-        if case .string(let message)? = error["message"] {
-            return message
-        }
-        return nil
-    }
 }
 
 private extension RunLifecycleState {

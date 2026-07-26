@@ -92,4 +92,77 @@ final class InboxTests: XCTestCase {
             }
         )
     }
+
+    func testCoreInboxResponseMapsRunApproval() throws {
+        let data = Data(
+            """
+            {
+              "items": [{
+                "id": "run-approval:run_1:approval_1",
+                "kind": "approval",
+                "title": "允许执行命令",
+                "summary": "npm test",
+                "createdAt": "2026-07-26T12:00:00.000Z",
+                "requiresAttention": true,
+                "runId": "run_1",
+                "conversationId": null,
+                "approval": {
+                  "source": "run",
+                  "activityId": null,
+                  "externalId": "approval_1",
+                  "decisions": ["allow_once", "deny"],
+                  "resolvable": true,
+                  "reason": null
+                }
+              }],
+              "serverTime": "2026-07-26T12:00:01.000Z"
+            }
+            """.utf8
+        )
+
+        let response = try JSONDecoder().decode(
+            CoreInboxResponse.self,
+            from: data
+        )
+        let item = try XCTUnwrap(
+            response.items.first.flatMap(InboxItem.init(coreItem:))
+        )
+
+        XCTAssertEqual(item.kind, .approval)
+        XCTAssertEqual(item.runID, "run_1")
+        XCTAssertEqual(
+            item.approvalSource,
+            .run(externalID: "approval_1")
+        )
+    }
+
+    func testTimedOutRunHasFriendlyRetryPresentation() {
+        let run = CoreRun(
+            id: "run_timeout",
+            commandId: "command_timeout",
+            nodeId: "node_1",
+            agentId: "agent_1",
+            localAgentId: "local_1",
+            localRunId: "local_run_1",
+            status: "timed_out",
+            prompt: "执行耗时任务",
+            sessionKey: nil,
+            result: nil,
+            error: [
+                "code": .string("execution_timeout"),
+                "message": .string("Execution timed out after 60 seconds")
+            ],
+            requestedBy: "user_1",
+            createdAt: "2026-07-26T12:00:00.000Z",
+            updatedAt: "2026-07-26T12:01:00.000Z",
+            startedAt: "2026-07-26T12:00:01.000Z",
+            finishedAt: "2026-07-26T12:01:00.000Z"
+        )
+
+        XCTAssertTrue(run.canRetry)
+        XCTAssertEqual(run.failurePresentation?.title, "执行超时")
+        XCTAssertTrue(
+            run.failurePresentation?.suggestion.contains("重试") == true
+        )
+    }
 }

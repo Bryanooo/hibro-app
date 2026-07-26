@@ -301,6 +301,32 @@ struct RunEventsResponse: Codable, Sendable {
     let events: [CoreRunEvent]
 }
 
+struct CoreInboxResponse: Codable, Hashable, Sendable {
+    let items: [CoreInboxItem]
+    let serverTime: String
+}
+
+struct CoreInboxItem: Codable, Hashable, Sendable, Identifiable {
+    let id: String
+    let kind: String
+    let title: String
+    let summary: String
+    let createdAt: String
+    let requiresAttention: Bool
+    let runId: String?
+    let conversationId: String?
+    let approval: CoreInboxApproval?
+}
+
+struct CoreInboxApproval: Codable, Hashable, Sendable {
+    let source: String
+    let activityId: String?
+    let externalId: String?
+    let decisions: [String]
+    let resolvable: Bool
+    let reason: String?
+}
+
 struct ArtifactPayload: Sendable {
     let data: Data
     let suggestedFilename: String?

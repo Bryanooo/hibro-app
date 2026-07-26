@@ -99,6 +99,24 @@ final class HibroUITests: XCTestCase {
         capture("dark-approval")
     }
 
+    func testConversationPinsApprovalAboveComposer() {
+        launchApp()
+        openSection("更多")
+        app.staticTexts["对话"].firstMatch.tap()
+        XCTAssertTrue(
+            app.navigationBars["对话"].waitForExistence(timeout: 4)
+        )
+        app.staticTexts["检查 Core 部署状态"].firstMatch.tap()
+
+        XCTAssertTrue(
+            app.staticTexts["Agent 正在等待你的决定"]
+                .waitForExistence(timeout: 4)
+        )
+        XCTAssertTrue(app.buttons["仅本次"].isHittable)
+        XCTAssertTrue(app.buttons["本会话"].isHittable)
+        XCTAssertTrue(app.buttons["拒绝"].isHittable)
+    }
+
     func testCompactSplitWidthWorkflow() throws {
         launchApp()
         try requireIPad()

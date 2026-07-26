@@ -39,6 +39,11 @@ actor CoreAPI {
         return response.values
     }
 
+    func inbox() async throws -> [CoreInboxItem] {
+        let response: CoreInboxResponse = try await request(path: "/v1/app/inbox")
+        return response.items
+    }
+
     func artifacts() async throws -> [CoreArtifact] {
         let response: APIListResponse<CoreArtifact> = try await request(path: "/v1/artifacts")
         return response.values

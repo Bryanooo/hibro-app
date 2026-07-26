@@ -5,7 +5,40 @@ enum AppPhase: Equatable {
     case launching
     case signedOut
     case authenticating
+    case connectionUnavailable
     case signedIn
+}
+
+enum CoreConnectionState: String, Equatable {
+    case connecting
+    case connected
+    case reconnecting
+    case offline
+
+    var title: String {
+        switch self {
+        case .connecting: "正在连接"
+        case .connected: "连接正常"
+        case .reconnecting: "正在重新连接"
+        case .offline: "离线"
+        }
+    }
+}
+
+enum AppAppearance: String, CaseIterable, Identifiable {
+    case system
+    case light
+    case dark
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .system: "跟随系统"
+        case .light: "浅色"
+        case .dark: "深色"
+        }
+    }
 }
 
 enum AppSection: String, CaseIterable, Identifiable {
@@ -57,20 +90,32 @@ final class AppModel {
     var isWorking = false
     var isDemoMode = false
     var lastRefreshAt: Date?
+    var connectionState = CoreConnectionState.connecting
+    var connectionMessage: String?
+    var appearance: AppAppearance
 
     let api = CoreAPI()
     private let oauth = OAuthCoordinator()
     private var conversationStreamTask: Task<Void, Never>?
+    private var conversationRefreshTask: Task<Void, Never>?
     private var globalStreamTask: Task<Void, Never>?
     private var globalRefreshTask: Task<Void, Never>?
     private var conversationSequences: [String: Int] = [:]
     private var pendingDeepLink: URL?
     private static let serverDefaultsKey = "hibro.core.baseURL"
+    private static let appearanceDefaultsKey = "hibro.appearance"
     nonisolated static let defaultServerURL = URL(
         string: "https://hibro.online"
     )!
 
     init() {
+        appearance = QALaunchConfiguration.appearance
+            ?? AppAppearance(
+                rawValue: UserDefaults.standard.string(
+                    forKey: Self.appearanceDefaultsKey
+                ) ?? ""
+            )
+            ?? .system
         Task { await restore() }
     }
 
@@ -90,6 +135,9 @@ final class AppModel {
     var nodes: [CoreNode] { bootstrap?.nodes ?? [] }
     var teams: [CoreTeam] { bootstrap?.teams ?? [] }
     var conversations: [CoreConversation] { bootstrap?.conversations ?? [] }
+    var hasCachedContent: Bool {
+        bootstrap != nil || !runs.isEmpty || !artifacts.isEmpty
+    }
     var inboxItems: [InboxItem] {
         if let serverInboxItems {
             return serverInboxItems.filter { item in
@@ -128,6 +176,8 @@ final class AppModel {
             return
         }
         await api.configure(baseURL: serverURL, tokens: session)
+        let restoredCache = restoreCachedState(for: serverURL)
+        connectionState = .connecting
         do {
             try await refresh()
             phase = .signedIn
@@ -137,10 +187,21 @@ final class AppModel {
             if case APIError.unauthorized = error {
                 KeychainStore.deleteSession()
                 await api.clearSession()
+                clearCachedState()
+                handle(error)
+                phase = .signedOut
+                return
             }
-            handle(error)
-            phase = .signedOut
+            markConnectionUnavailable(error)
+            phase = restoredCache ? .signedIn : .connectionUnavailable
+            startGlobalEvents()
+            processPendingDeepLink()
         }
+    }
+
+    func retryInitialConnection() async {
+        phase = .launching
+        await restore()
     }
 
     func login(serverAddress: String) async {
@@ -149,6 +210,8 @@ final class AppModel {
             return
         }
         phase = .authenticating
+        connectionState = .connecting
+        connectionMessage = nil
         isWorking = true
         defer { isWorking = false }
         do {
@@ -166,6 +229,7 @@ final class AppModel {
             processPendingDeepLink()
         } catch {
             handle(error)
+            connectionState = .offline
             phase = .signedOut
         }
     }
@@ -239,6 +303,9 @@ final class AppModel {
         print("[Hibro Inbox] Run statuses: \(statuses)")
         #endif
         lastRefreshAt = Date()
+        connectionState = .connected
+        connectionMessage = nil
+        persistCachedState()
     }
 
     func refreshFromUser() async {
@@ -247,8 +314,17 @@ final class AppModel {
         do {
             try await refresh()
         } catch {
+            markConnectionUnavailable(error)
             handle(error)
         }
+    }
+
+    func setAppearance(_ value: AppAppearance) {
+        appearance = value
+        UserDefaults.standard.set(
+            value.rawValue,
+            forKey: Self.appearanceDefaultsKey
+        )
     }
 
     func openConversation(_ id: String) async {
@@ -316,6 +392,36 @@ final class AppModel {
             watchConversation(conversationID)
             return true
         } catch {
+            handle(error)
+            return false
+        }
+    }
+
+    func answerQuestion(
+        conversationID: String,
+        activityID: String,
+        content: String
+    ) async -> Bool {
+        guard content.nilIfBlank != nil else { return false }
+        if isDemoMode {
+            handledActivityIDs.insert(activityID)
+            return true
+        }
+        isWorking = true
+        defer { isWorking = false }
+        do {
+            let detail = try await api.sendMessage(
+                conversationID: conversationID,
+                content: content
+            )
+            conversationDetail = detail
+            conversationDetailsByID[conversationID] = detail
+            handledActivityIDs.insert(activityID)
+            watchConversation(conversationID)
+            persistCachedState()
+            return true
+        } catch {
+            markConnectionUnavailable(error)
             handle(error)
             return false
         }
@@ -508,11 +614,21 @@ final class AppModel {
 
     func resumeRealtimeSync() {
         guard phase == .signedIn, !isDemoMode else { return }
+        if connectionState != .connected {
+            connectionState = .reconnecting
+        }
         startGlobalEvents()
+        if let selectedConversationID {
+            watchConversation(selectedConversationID)
+        }
         scheduleGlobalRefresh(delay: .zero)
     }
 
     func suspendRealtimeSync() {
+        conversationStreamTask?.cancel()
+        conversationStreamTask = nil
+        conversationRefreshTask?.cancel()
+        conversationRefreshTask = nil
         globalStreamTask?.cancel()
         globalStreamTask = nil
         globalRefreshTask?.cancel()
@@ -538,6 +654,9 @@ final class AppModel {
         conversationSequences = [:]
         selectedConversationID = nil
         isDemoMode = false
+        connectionState = .connecting
+        connectionMessage = nil
+        clearCachedState()
         phase = .signedOut
     }
 
@@ -557,6 +676,8 @@ final class AppModel {
         handledActivityIDs = []
         handledRunApprovalIDs = []
         lastRefreshAt = Date()
+        connectionState = .connected
+        connectionMessage = nil
         phase = .signedIn
     }
 
@@ -629,6 +750,7 @@ final class AppModel {
 
     private func watchConversation(_ id: String) {
         conversationStreamTask?.cancel()
+        conversationRefreshTask?.cancel()
         conversationStreamTask = Task { [weak self] in
             guard let self else { return }
             var sequence = conversationSequences[id] ?? 0
@@ -644,10 +766,9 @@ final class AppModel {
                         if Task.isCancelled { return }
                         sequence = max(sequence, event.sequence)
                         conversationSequences[id] = sequence
-                        conversationDetail = try await api.conversation(id: id)
-                        if let conversationDetail {
-                            conversationDetailsByID[id] = conversationDetail
-                        }
+                        connectionState = .connected
+                        connectionMessage = nil
+                        scheduleConversationRefresh(id: id)
                     }
                     if !Task.isCancelled {
                         try? await Task.sleep(for: .seconds(1))
@@ -656,6 +777,8 @@ final class AppModel {
                     return
                 } catch {
                     if Task.isCancelled { return }
+                    connectionState = .reconnecting
+                    connectionMessage = connectionErrorMessage(error)
                     try? await Task.sleep(for: .seconds(2))
                 }
             }
@@ -671,6 +794,8 @@ final class AppModel {
                     let request = try await api.globalEventRequest()
                     for try await _ in SSEClient.coreEvents(request: request) {
                         if Task.isCancelled { return }
+                        connectionState = .connected
+                        connectionMessage = nil
                         scheduleGlobalRefresh()
                     }
                     if !Task.isCancelled {
@@ -680,6 +805,8 @@ final class AppModel {
                     return
                 } catch {
                     if Task.isCancelled { return }
+                    connectionState = .reconnecting
+                    connectionMessage = connectionErrorMessage(error)
                     try? await Task.sleep(for: .seconds(2))
                 }
             }
@@ -689,16 +816,41 @@ final class AppModel {
     private func scheduleGlobalRefresh(
         delay: Duration = .milliseconds(500)
     ) {
-        globalRefreshTask?.cancel()
+        guard globalRefreshTask == nil else { return }
         globalRefreshTask = Task { [weak self] in
+            defer { self?.globalRefreshTask = nil }
             if delay != .zero {
                 try? await Task.sleep(for: delay)
             }
             guard !Task.isCancelled, let self else { return }
             do {
                 try await refresh()
+                if phase == .connectionUnavailable {
+                    phase = .signedIn
+                    processPendingDeepLink()
+                }
             } catch {
-                handle(error)
+                markConnectionUnavailable(error)
+            }
+        }
+    }
+
+    private func scheduleConversationRefresh(id: String) {
+        conversationRefreshTask?.cancel()
+        conversationRefreshTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(250))
+            guard !Task.isCancelled, let self else { return }
+            defer { conversationRefreshTask = nil }
+            do {
+                let detail = try await api.conversation(id: id)
+                conversationDetail = detail
+                conversationDetailsByID[id] = detail
+                connectionState = .connected
+                connectionMessage = nil
+                persistCachedState()
+            } catch {
+                if error is CancellationError { return }
+                markConnectionUnavailable(error)
             }
         }
     }
@@ -805,8 +957,107 @@ final class AppModel {
         #endif
     }
 
+    private func markConnectionUnavailable(_ error: Error) {
+        connectionState = .offline
+        connectionMessage = connectionErrorMessage(error)
+    }
+
+    private func connectionErrorMessage(_ error: Error) -> String {
+        if let urlError = error as? URLError {
+            return switch urlError.code {
+            case .cannotFindHost:
+                "找不到 Hibro Core"
+            case .cannotConnectToHost, .networkConnectionLost:
+                "暂时无法连接 Hibro Core"
+            case .notConnectedToInternet:
+                "设备当前没有可用网络"
+            case .secureConnectionFailed, .serverCertificateUntrusted:
+                "Core 的 HTTPS 证书无法验证"
+            case .timedOut:
+                "连接 Hibro Core 超时"
+            default:
+                urlError.localizedDescription
+            }
+        }
+        return (error as? LocalizedError)?.errorDescription
+            ?? error.localizedDescription
+    }
+
+    private func persistCachedState() {
+        guard !isDemoMode, let serverURL else { return }
+        let state = CachedAppState(
+            serverURL: serverURL.absoluteString,
+            bootstrap: bootstrap,
+            runs: runs,
+            artifacts: artifacts,
+            runEventsByID: runEventsByID,
+            conversationDetailsByID: conversationDetailsByID,
+            inboxItems: serverInboxItems,
+            handledActivityIDs: handledActivityIDs,
+            handledRunApprovalIDs: handledRunApprovalIDs,
+            savedAt: Date()
+        )
+        do {
+            let directory = Self.cacheURL.deletingLastPathComponent()
+            try FileManager.default.createDirectory(
+                at: directory,
+                withIntermediateDirectories: true
+            )
+            let data = try JSONEncoder().encode(state)
+            try data.write(to: Self.cacheURL, options: .atomic)
+            try FileManager.default.setAttributes(
+                [
+                    .protectionKey:
+                        FileProtectionType.completeUntilFirstUserAuthentication
+                ],
+                ofItemAtPath: Self.cacheURL.path
+            )
+        } catch {
+            #if DEBUG
+            print("[Hibro Cache] Failed to persist: \(error)")
+            #endif
+        }
+    }
+
+    @discardableResult
+    private func restoreCachedState(for serverURL: URL) -> Bool {
+        guard let data = try? Data(contentsOf: Self.cacheURL),
+              let state = try? JSONDecoder().decode(
+                CachedAppState.self,
+                from: data
+              ),
+              state.serverURL == serverURL.absoluteString
+        else {
+            return false
+        }
+        bootstrap = state.bootstrap
+        runs = state.runs
+        artifacts = state.artifacts
+        runEventsByID = state.runEventsByID
+        conversationDetailsByID = state.conversationDetailsByID
+        serverInboxItems = state.inboxItems
+        handledActivityIDs = state.handledActivityIDs
+        handledRunApprovalIDs = state.handledRunApprovalIDs
+        lastRefreshAt = state.savedAt
+        return hasCachedContent
+    }
+
+    private func clearCachedState() {
+        try? FileManager.default.removeItem(at: Self.cacheURL)
+    }
+
+    private static var cacheURL: URL {
+        FileManager.default.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        )[0]
+        .appending(path: "Hibro", directoryHint: .isDirectory)
+        .appending(path: "app-state.json")
+    }
+
     private func handle(_ error: Error) {
         if let urlError = error as? URLError {
+            markConnectionUnavailable(error)
             errorMessage = switch urlError.code {
             case .cannotFindHost:
                 "找不到 Hibro Core。请检查地址、DNS 或局域网连接。"
@@ -890,6 +1141,19 @@ final class AppModel {
             .trimmingCharacters(in: CharacterSet(charactersIn: ".-"))
         return name.isEmpty ? "artifact" : name
     }
+}
+
+struct CachedAppState: Codable {
+    let serverURL: String
+    let bootstrap: BootstrapResponse?
+    let runs: [CoreRun]
+    let artifacts: [CoreArtifact]
+    let runEventsByID: [String: [CoreRunEvent]]
+    let conversationDetailsByID: [String: ConversationDetail]
+    let inboxItems: [InboxItem]?
+    let handledActivityIDs: Set<String>
+    let handledRunApprovalIDs: Set<String>
+    let savedAt: Date
 }
 
 extension String {

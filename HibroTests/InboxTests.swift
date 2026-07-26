@@ -165,4 +165,40 @@ final class InboxTests: XCTestCase {
             run.failurePresentation?.suggestion.contains("重试") == true
         )
     }
+
+    func testOfflineCacheRoundTripPreservesControlPlaneState() throws {
+        let inbox = InboxBuilder.build(
+            runs: DemoData.runs,
+            conversationDetails: Array(DemoData.conversationDetails.values)
+        )
+        let state = CachedAppState(
+            serverURL: "https://hibro.online/",
+            bootstrap: DemoData.bootstrap,
+            runs: DemoData.runs,
+            artifacts: DemoData.artifacts,
+            runEventsByID: [:],
+            conversationDetailsByID: DemoData.conversationDetails,
+            inboxItems: inbox,
+            handledActivityIDs: ["activity_demo_question"],
+            handledRunApprovalIDs: ["run_demo_active:approval_demo"],
+            savedAt: Date(timeIntervalSince1970: 1_785_000_000)
+        )
+
+        let data = try JSONEncoder().encode(state)
+        let restored = try JSONDecoder().decode(
+            CachedAppState.self,
+            from: data
+        )
+
+        XCTAssertEqual(restored.serverURL, state.serverURL)
+        XCTAssertEqual(restored.bootstrap, state.bootstrap)
+        XCTAssertEqual(restored.runs, state.runs)
+        XCTAssertEqual(restored.artifacts, state.artifacts)
+        XCTAssertEqual(restored.inboxItems, state.inboxItems)
+        XCTAssertEqual(restored.handledActivityIDs, state.handledActivityIDs)
+        XCTAssertEqual(
+            restored.handledRunApprovalIDs,
+            state.handledRunApprovalIDs
+        )
+    }
 }

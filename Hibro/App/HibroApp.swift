@@ -16,7 +16,7 @@ struct HibroApp: App {
         let content = RootView()
             .environment(model)
             .tint(HibroTheme.accent)
-            .preferredColorScheme(.dark)
+            .preferredColorScheme(model.appearance.colorScheme)
             .onOpenURL { model.handleDeepLink($0) }
             .onChange(of: scenePhase) {
                 switch scenePhase {
@@ -31,7 +31,7 @@ struct HibroApp: App {
 
         if let width = QALaunchConfiguration.viewportWidth {
             ZStack(alignment: .leading) {
-                Color.black.ignoresSafeArea()
+                HibroTheme.background.ignoresSafeArea()
                 content
                     .frame(width: width)
                     .environment(
@@ -43,6 +43,16 @@ struct HibroApp: App {
             }
         } else {
             content
+        }
+    }
+}
+
+private extension AppAppearance {
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system: nil
+        case .light: .light
+        case .dark: .dark
         }
     }
 }

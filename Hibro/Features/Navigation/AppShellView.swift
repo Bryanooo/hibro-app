@@ -24,6 +24,15 @@ struct AppShellView: View {
                 wideShell
             }
         }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if !model.isDemoMode,
+               (
+                   model.connectionState == .offline
+                       || model.connectionState == .reconnecting
+               ) {
+                connectionBanner
+            }
+        }
         .onChange(of: model.section) {
             if horizontalSizeClass != .compact {
                 widePath = NavigationPath()
@@ -47,6 +56,37 @@ struct AppShellView: View {
             else { return }
             show(.inbox(id))
         }
+    }
+
+    private var connectionBanner: some View {
+        HStack(spacing: 10) {
+            Image(systemName: model.connectionState == .offline
+                ? "wifi.slash"
+                : "arrow.triangle.2.circlepath")
+            VStack(alignment: .leading, spacing: 2) {
+                Text(model.connectionState.title)
+                    .font(.caption.weight(.semibold))
+                if let message = model.connectionMessage {
+                    Text(message)
+                        .font(.caption2)
+                        .lineLimit(1)
+                }
+            }
+            Spacer()
+            Button("重试") {
+                Task { await model.refreshFromUser() }
+            }
+            .font(.caption.weight(.semibold))
+            .disabled(model.isWorking)
+        }
+        .foregroundStyle(
+            model.connectionState == .offline
+                ? HibroTheme.danger
+                : HibroTheme.orange
+        )
+        .padding(.horizontal, 16)
+        .padding(.vertical, 9)
+        .background(.regularMaterial)
     }
 
     private var sectionBinding: Binding<AppSection> {

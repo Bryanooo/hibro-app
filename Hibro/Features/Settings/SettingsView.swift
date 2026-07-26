@@ -35,8 +35,10 @@ struct SettingsView: View {
                     value: model.bootstrap?.apiVersion ?? "—"
                 )
                 LabeledContent(
-                    "实时连接",
-                    value: model.isDemoMode ? "演示" : "SSE"
+                    "Core 连接",
+                    value: model.isDemoMode
+                        ? "演示"
+                        : model.connectionState.title
                 )
                 Button {
                     Task { await model.refreshFromUser() }
@@ -48,6 +50,21 @@ struct SettingsView: View {
                 } label: {
                     Label("更换 Hibro Core", systemImage: "server.rack")
                 }
+            }
+
+            Section("外观") {
+                Picker(
+                    "显示模式",
+                    selection: Binding(
+                        get: { model.appearance },
+                        set: { model.setAppearance($0) }
+                    )
+                ) {
+                    ForEach(AppAppearance.allCases) { appearance in
+                        Text(appearance.title).tag(appearance)
+                    }
+                }
+                .pickerStyle(.segmented)
             }
 
             Section("通知") {

@@ -85,7 +85,13 @@ final class HibroUITests: XCTestCase {
     }
 
     func testDarkModeVisualHierarchy() {
-        launchApp()
+        launchApp(
+            arguments: [
+                "-hibro-demo",
+                "-hibro-qa-appearance",
+                "dark",
+            ]
+        )
         XCTAssertTrue(
             app.staticTexts["需要你的决定"].waitForExistence(timeout: 8)
         )
@@ -101,6 +107,45 @@ final class HibroUITests: XCTestCase {
         XCTAssertTrue(app.buttons["仅本次允许"].isHittable)
         XCTAssertTrue(app.buttons["本会话允许"].isHittable)
         capture("dark-approval")
+    }
+
+    func testLightModeVisualHierarchy() {
+        launchApp(
+            arguments: [
+                "-hibro-demo",
+                "-hibro-qa-appearance",
+                "light",
+            ]
+        )
+        XCTAssertTrue(
+            app.staticTexts["需要你的决定"].waitForExistence(timeout: 8)
+        )
+        capture("light-home")
+
+        openSection("收件箱")
+        app.staticTexts["部署 Core 更新"].firstMatch.tap()
+        XCTAssertTrue(
+            app.staticTexts["做出决定"].waitForExistence(timeout: 4)
+        )
+        XCTAssertTrue(app.buttons["拒绝"].exists)
+        capture("light-approval")
+    }
+
+    func testInboxQuestionSupportsQuickReply() {
+        launchApp()
+        openSection("收件箱")
+        app.staticTexts["是否保留 v1 API 兼容性？"].firstMatch.tap()
+        XCTAssertTrue(
+            app.staticTexts["直接回复 Agent"].waitForExistence(timeout: 4)
+        )
+        let replyField = app.textFields["输入你的决定或补充说明"]
+        XCTAssertTrue(replyField.waitForExistence(timeout: 4))
+        replyField.tap()
+        replyField.typeText("保留兼容性，并补充迁移说明")
+        app.buttons["发送回复"].tap()
+        XCTAssertTrue(
+            app.navigationBars["收件箱"].waitForExistence(timeout: 4)
+        )
     }
 
     func testConversationPinsApprovalAboveComposer() {

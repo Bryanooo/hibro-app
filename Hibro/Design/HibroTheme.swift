@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 enum HibroTheme {
     static let accent = Color(red: 0.65, green: 0.91, blue: 0.31)
@@ -6,14 +7,36 @@ enum HibroTheme {
     static let violet = Color(red: 0.63, green: 0.52, blue: 0.94)
     static let orange = Color(red: 0.95, green: 0.66, blue: 0.27)
     static let danger = Color(red: 0.95, green: 0.36, blue: 0.38)
-    static let panel = Color.white.opacity(0.055)
-    static let panelStrong = Color.white.opacity(0.09)
-    static let border = Color.white.opacity(0.10)
-    static let background = Color(
-        red: 0.035,
-        green: 0.047,
-        blue: 0.055
+    static let panel = dynamicColor(
+        light: .secondarySystemGroupedBackground,
+        dark: UIColor(white: 1, alpha: 0.055)
     )
+    static let panelStrong = dynamicColor(
+        light: .tertiarySystemGroupedBackground,
+        dark: UIColor(white: 1, alpha: 0.09)
+    )
+    static let border = dynamicColor(
+        light: UIColor.separator.withAlphaComponent(0.24),
+        dark: UIColor(white: 1, alpha: 0.10)
+    )
+    static let background = dynamicColor(
+        light: .systemGroupedBackground,
+        dark: UIColor(
+            red: 0.035,
+            green: 0.047,
+            blue: 0.055,
+            alpha: 1
+        )
+    )
+
+    private static func dynamicColor(
+        light: UIColor,
+        dark: UIColor
+    ) -> Color {
+        Color(uiColor: UIColor { traits in
+            traits.userInterfaceStyle == .dark ? dark : light
+        })
+    }
 
     static func engineColor(_ engine: String) -> Color {
         switch engine {

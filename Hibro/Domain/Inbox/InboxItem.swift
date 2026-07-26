@@ -1,6 +1,6 @@
 import Foundation
 
-enum ApprovalDecision: String, CaseIterable, Hashable, Sendable {
+enum ApprovalDecision: String, CaseIterable, Codable, Hashable, Sendable {
     case allowOnce = "allow_once"
     case allowAlways = "allow_always"
     case deny
@@ -22,7 +22,7 @@ enum ApprovalDecision: String, CaseIterable, Hashable, Sendable {
     }
 }
 
-enum InboxItemKind: String, CaseIterable, Hashable, Sendable {
+enum InboxItemKind: String, CaseIterable, Codable, Hashable, Sendable {
     case approval
     case question
     case runFailed
@@ -51,7 +51,7 @@ enum InboxItemKind: String, CaseIterable, Hashable, Sendable {
     }
 }
 
-struct InboxItem: Identifiable, Hashable, Sendable {
+struct InboxItem: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let kind: InboxItemKind
     let title: String
@@ -106,7 +106,7 @@ extension InboxItem {
     }
 }
 
-enum InboxApprovalSource: Hashable, Sendable {
+enum InboxApprovalSource: Codable, Hashable, Sendable {
     case conversation(activityID: String)
     case run(externalID: String)
 }

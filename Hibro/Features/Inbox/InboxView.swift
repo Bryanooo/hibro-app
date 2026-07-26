@@ -25,6 +25,14 @@ struct InboxView: View {
                             ? HibroTheme.orange.opacity(0.08)
                             : Color.clear
                     )
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button {
+                            model.selectedInboxItemID = item.id
+                        } label: {
+                            Label(item.quickActionTitle, systemImage: item.quickActionSymbol)
+                        }
+                        .tint(item.kind.color)
+                    }
                 }
                 .listStyle(.insetGrouped)
             }
@@ -130,6 +138,7 @@ struct InboxItemDetailView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     let itemID: String
+    @State private var reply = ""
 
     private var item: InboxItem? {
         model.inboxItems.first(where: { $0.id == itemID })
@@ -164,6 +173,9 @@ struct InboxItemDetailView: View {
                     context(item)
                     if item.kind == .approval {
                         approvalActions(item)
+                    } else if item.kind == .question {
+                        quickReply(item)
+                        relatedActions(item)
                     } else {
                         relatedActions(item)
                     }
@@ -181,6 +193,45 @@ struct InboxItemDetailView: View {
         }
         .navigationTitle("事项详情")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    @ViewBuilder
+    private func quickReply(_ item: InboxItem) -> some View {
+        if let conversationID = item.conversationID,
+           let activity {
+            VStack(alignment: .leading, spacing: 12) {
+                Label("直接回复 Agent", systemImage: "arrowshape.turn.up.left.fill")
+                    .font(.headline)
+                TextField(
+                    "输入你的决定或补充说明",
+                    text: $reply,
+                    axis: .vertical
+                )
+                .lineLimit(2...6)
+                .textFieldStyle(.roundedBorder)
+                Button {
+                    let content = reply
+                    Task {
+                        if await model.answerQuestion(
+                            conversationID: conversationID,
+                            activityID: activity.id,
+                            content: content
+                        ) {
+                            dismiss()
+                        }
+                    }
+                } label: {
+                    Label("发送回复", systemImage: "paperplane.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(HibroTheme.accent)
+                .foregroundStyle(.black)
+                .disabled(reply.nilIfBlank == nil || model.isWorking)
+            }
+            .padding(18)
+            .hibroPanel()
+        }
     }
 
     private func identity(_ item: InboxItem) -> some View {
@@ -320,6 +371,26 @@ private extension InboxItemKind {
         case .question: HibroTheme.violet
         case .runFailed: HibroTheme.danger
         case .completed: HibroTheme.accent
+        }
+    }
+}
+
+private extension InboxItem {
+    var quickActionTitle: String {
+        switch kind {
+        case .approval: "审批"
+        case .question: "回复"
+        case .runFailed: "检查"
+        case .completed: "查看"
+        }
+    }
+
+    var quickActionSymbol: String {
+        switch kind {
+        case .approval: "hand.raised.fill"
+        case .question: "arrowshape.turn.up.left.fill"
+        case .runFailed: "exclamationmark.triangle.fill"
+        case .completed: "doc.text.magnifyingglass"
         }
     }
 }

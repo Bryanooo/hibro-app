@@ -1,0 +1,785 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		04A3D4B6CA82FD20A796EF66 /* AppShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B007124FD6C0B6F79884FBC /* AppShellView.swift */; };
+		058159C9676BEBBA49E7A51F /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C7937C7958C66A870B572E3 /* HomeView.swift */; };
+		07F0AB7AC37AF0E639AB0B6A /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD2BDAB0E420A86937BC39FA /* RootView.swift */; };
+		091F7A35FD6BB20DF5AE57CD /* SSEClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB042A95C34ECC33552A6333 /* SSEClient.swift */; };
+		0FF4B06D48506D220AD16061 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A545185A175126D13298257A /* KeychainStore.swift */; };
+		17CD2BE7C1A78B1D5EB3564B /* ArtifactsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93C3F4D2C2CAC4C06064162 /* ArtifactsView.swift */; };
+		1926007AB2B2C83C6865F11C /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC52133F6C0C1362F0407E2A /* SettingsView.swift */; };
+		244FF18962D9A43093915045 /* QALaunchConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EACDA8E57312FED89F3002A /* QALaunchConfiguration.swift */; };
+		27B20F3A6A80DFFEFF116053 /* InboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 628D65F91B3ACAD78FF67C99 /* InboxView.swift */; };
+		30E655DA946201CA62F94ED1 /* ApprovalAuthorizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E64F0BE4F72AD78221D6C70F /* ApprovalAuthorizer.swift */; };
+		34C4047118631774B52D5D7D /* HibroUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8288CB22F5ADC61C6A7A191 /* HibroUITests.swift */; };
+		3BBFD6097B5B26E678629FBD /* HibroApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B558A8DCF0982A59C9CD1C3A /* HibroApp.swift */; };
+		461323BAB1014FBF7DC876D8 /* RunPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2242477D029CD3F47FC338E2 /* RunPresentation.swift */; };
+		533981B4411C293B77BF045B /* InboxItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B4107ABEA6AA905B7A637BD /* InboxItem.swift */; };
+		5F52CE525E9531C6BE07EC41 /* ServerSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5027362F9EE09D2F97D2E5E2 /* ServerSetupView.swift */; };
+		6C6885CFB03635ABEE44070D /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146E17BF82C9BF6D949A0891 /* Components.swift */; };
+		737700BFBCD626E4B4F12B11 /* AgentsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E2AA2ACDA4FDD5A1807C993 /* AgentsView.swift */; };
+		8FCB70BC5E40FD0B8D1D82DC /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 916B2E84C33D6FAE6F336FE6 /* Models.swift */; };
+		9D9564ACBEBDF595D7D6E8E5 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 6CD9CE4749F0915541ED78D6 /* PrivacyInfo.xcprivacy */; };
+		A050A5825B47AB8B04DBCA80 /* PKCE.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEFED4E52FC65C4FA74A4D19 /* PKCE.swift */; };
+		AACD09953794FE5EA854E4E3 /* DemoData.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFA834D3945193AEF74A49D8 /* DemoData.swift */; };
+		B2597E34CA07F42FD4F71791 /* ConversationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2A313BA71EC3C67232BF6F3 /* ConversationsView.swift */; };
+		B9BD4E141443E7BAB760C8DC /* InboxTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23BF3B32A017F3B568E93D62 /* InboxTests.swift */; };
+		BB705451BE61B979B068B8CD /* PKCETests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68268A2482345A1719392549 /* PKCETests.swift */; };
+		BD1D4E859742C617F87E0CD2 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2B244CAFB80CEA3B9FA2AD /* AppModel.swift */; };
+		C2B4614921094A3741B86281 /* MoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5E8E0C24F027F1C2F0A0EB4 /* MoreView.swift */; };
+		C6CF6704A9126BCE6C53DBD6 /* OAuthCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1AC4A95F5F3E1021D7EDFDC /* OAuthCoordinator.swift */; };
+		CC60BE84ED36CB874FB9AB1F /* RunsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1426E885C51E71780564CDE /* RunsView.swift */; };
+		D223D08E1644E10BB39702C8 /* CoreAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC38124AC879C6D549DE6128 /* CoreAPI.swift */; };
+		D3BB1E82EB05224E37C35D5A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 899AE7CF28A91D2CE0E345C1 /* Assets.xcassets */; };
+		DE8383066EDC063A663328E8 /* HibroTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 448983F754EE2FB9A0F99325 /* HibroTheme.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		AE9F85FF2E0A3E4D7D48D6D6 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 59F8A112CC80A20F0E733C1C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1172FAA03A986F4EFB58C9B5;
+			remoteInfo = Hibro;
+		};
+		D6AC9D77AE62D0A588E0DF1B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 59F8A112CC80A20F0E733C1C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1172FAA03A986F4EFB58C9B5;
+			remoteInfo = Hibro;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		0C7937C7958C66A870B572E3 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		146E17BF82C9BF6D949A0891 /* Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components.swift; sourceTree = "<group>"; };
+		2242477D029CD3F47FC338E2 /* RunPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunPresentation.swift; sourceTree = "<group>"; };
+		23BF3B32A017F3B568E93D62 /* InboxTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboxTests.swift; sourceTree = "<group>"; };
+		3B4107ABEA6AA905B7A637BD /* InboxItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboxItem.swift; sourceTree = "<group>"; };
+		448983F754EE2FB9A0F99325 /* HibroTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HibroTheme.swift; sourceTree = "<group>"; };
+		4700B491F52103CB8F7F3E5C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		4D5779639F263511AA1C456A /* HibroUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = HibroUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		4E2AA2ACDA4FDD5A1807C993 /* AgentsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentsView.swift; sourceTree = "<group>"; };
+		5027362F9EE09D2F97D2E5E2 /* ServerSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerSetupView.swift; sourceTree = "<group>"; };
+		5A2B244CAFB80CEA3B9FA2AD /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		628D65F91B3ACAD78FF67C99 /* InboxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboxView.swift; sourceTree = "<group>"; };
+		62B94EE4E5E151CC2AFA4373 /* Hibro.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Hibro.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		68268A2482345A1719392549 /* PKCETests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PKCETests.swift; sourceTree = "<group>"; };
+		6CD9CE4749F0915541ED78D6 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		7B007124FD6C0B6F79884FBC /* AppShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShellView.swift; sourceTree = "<group>"; };
+		899AE7CF28A91D2CE0E345C1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		8C9B71C7615E22412DFD6C50 /* HibroTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = HibroTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		8EACDA8E57312FED89F3002A /* QALaunchConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QALaunchConfiguration.swift; sourceTree = "<group>"; };
+		916B2E84C33D6FAE6F336FE6 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		A1AC4A95F5F3E1021D7EDFDC /* OAuthCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OAuthCoordinator.swift; sourceTree = "<group>"; };
+		A545185A175126D13298257A /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
+		AC52133F6C0C1362F0407E2A /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		AEFED4E52FC65C4FA74A4D19 /* PKCE.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PKCE.swift; sourceTree = "<group>"; };
+		B1426E885C51E71780564CDE /* RunsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunsView.swift; sourceTree = "<group>"; };
+		B558A8DCF0982A59C9CD1C3A /* HibroApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HibroApp.swift; sourceTree = "<group>"; };
+		CB042A95C34ECC33552A6333 /* SSEClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSEClient.swift; sourceTree = "<group>"; };
+		CC38124AC879C6D549DE6128 /* CoreAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreAPI.swift; sourceTree = "<group>"; };
+		D93C3F4D2C2CAC4C06064162 /* ArtifactsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtifactsView.swift; sourceTree = "<group>"; };
+		DFA834D3945193AEF74A49D8 /* DemoData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoData.swift; sourceTree = "<group>"; };
+		E2A313BA71EC3C67232BF6F3 /* ConversationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationsView.swift; sourceTree = "<group>"; };
+		E64F0BE4F72AD78221D6C70F /* ApprovalAuthorizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalAuthorizer.swift; sourceTree = "<group>"; };
+		F5E8E0C24F027F1C2F0A0EB4 /* MoreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoreView.swift; sourceTree = "<group>"; };
+		F8288CB22F5ADC61C6A7A191 /* HibroUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HibroUITests.swift; sourceTree = "<group>"; };
+		FD2BDAB0E420A86937BC39FA /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		0973B91546919C0BFBE4C5E9 /* Agents */ = {
+			isa = PBXGroup;
+			children = (
+				4E2AA2ACDA4FDD5A1807C993 /* AgentsView.swift */,
+			);
+			path = Agents;
+			sourceTree = "<group>";
+		};
+		0BFA7DF4A70C0D70ED5637B4 /* Navigation */ = {
+			isa = PBXGroup;
+			children = (
+				7B007124FD6C0B6F79884FBC /* AppShellView.swift */,
+			);
+			path = Navigation;
+			sourceTree = "<group>";
+		};
+		17339A79AB8BE55C70653D27 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				AC52133F6C0C1362F0407E2A /* SettingsView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		391C6D8A0A56DAAC4A935452 /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				5027362F9EE09D2F97D2E5E2 /* ServerSetupView.swift */,
+			);
+			path = Onboarding;
+			sourceTree = "<group>";
+		};
+		62E2191831F07928E6C782E7 /* Inbox */ = {
+			isa = PBXGroup;
+			children = (
+				3B4107ABEA6AA905B7A637BD /* InboxItem.swift */,
+			);
+			path = Inbox;
+			sourceTree = "<group>";
+		};
+		7C3CCDCEF37A1D629268AD7F /* Design */ = {
+			isa = PBXGroup;
+			children = (
+				146E17BF82C9BF6D949A0891 /* Components.swift */,
+				448983F754EE2FB9A0F99325 /* HibroTheme.swift */,
+			);
+			path = Design;
+			sourceTree = "<group>";
+		};
+		8215842E2CD185CD745126AA /* App */ = {
+			isa = PBXGroup;
+			children = (
+				5A2B244CAFB80CEA3B9FA2AD /* AppModel.swift */,
+				DFA834D3945193AEF74A49D8 /* DemoData.swift */,
+				B558A8DCF0982A59C9CD1C3A /* HibroApp.swift */,
+				8EACDA8E57312FED89F3002A /* QALaunchConfiguration.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		824CA821C97CD02E0821CEB1 /* Runs */ = {
+			isa = PBXGroup;
+			children = (
+				B1426E885C51E71780564CDE /* RunsView.swift */,
+			);
+			path = Runs;
+			sourceTree = "<group>";
+		};
+		8304E512CA24DAEF61F355FD = {
+			isa = PBXGroup;
+			children = (
+				EFF353730353F89991B9B98A /* Hibro */,
+				975FA8273E9083DEA244B83A /* HibroTests */,
+				E16BC426C06C40935B8219B2 /* HibroUITests */,
+				E2C0E6436BBBB7A2891464EE /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		85FBF16EF7675B60D68AF580 /* Artifacts */ = {
+			isa = PBXGroup;
+			children = (
+				D93C3F4D2C2CAC4C06064162 /* ArtifactsView.swift */,
+			);
+			path = Artifacts;
+			sourceTree = "<group>";
+		};
+		975FA8273E9083DEA244B83A /* HibroTests */ = {
+			isa = PBXGroup;
+			children = (
+				23BF3B32A017F3B568E93D62 /* InboxTests.swift */,
+				68268A2482345A1719392549 /* PKCETests.swift */,
+			);
+			path = HibroTests;
+			sourceTree = "<group>";
+		};
+		98F499928C41AF668DC20D4A /* More */ = {
+			isa = PBXGroup;
+			children = (
+				F5E8E0C24F027F1C2F0A0EB4 /* MoreView.swift */,
+			);
+			path = More;
+			sourceTree = "<group>";
+		};
+		9F7EAF0DA797EC9B5D604B7F /* Security */ = {
+			isa = PBXGroup;
+			children = (
+				E64F0BE4F72AD78221D6C70F /* ApprovalAuthorizer.swift */,
+			);
+			path = Security;
+			sourceTree = "<group>";
+		};
+		A11FAC823DC6F81395FA0D5C /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				899AE7CF28A91D2CE0E345C1 /* Assets.xcassets */,
+				4700B491F52103CB8F7F3E5C /* Info.plist */,
+				6CD9CE4749F0915541ED78D6 /* PrivacyInfo.xcprivacy */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		A28916450A267F5AEF1F579D /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				FD2BDAB0E420A86937BC39FA /* RootView.swift */,
+				0973B91546919C0BFBE4C5E9 /* Agents */,
+				85FBF16EF7675B60D68AF580 /* Artifacts */,
+				E76349AE58626DBD65ED17D9 /* Conversations */,
+				AF8C075113197EEF834EE65B /* Home */,
+				D69EEC615C2CDB5668779EBC /* Inbox */,
+				98F499928C41AF668DC20D4A /* More */,
+				0BFA7DF4A70C0D70ED5637B4 /* Navigation */,
+				391C6D8A0A56DAAC4A935452 /* Onboarding */,
+				824CA821C97CD02E0821CEB1 /* Runs */,
+				17339A79AB8BE55C70653D27 /* Settings */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		AF8C075113197EEF834EE65B /* Home */ = {
+			isa = PBXGroup;
+			children = (
+				0C7937C7958C66A870B572E3 /* HomeView.swift */,
+			);
+			path = Home;
+			sourceTree = "<group>";
+		};
+		B0C8E9FC57B10E066A0C61DE /* Runs */ = {
+			isa = PBXGroup;
+			children = (
+				2242477D029CD3F47FC338E2 /* RunPresentation.swift */,
+			);
+			path = Runs;
+			sourceTree = "<group>";
+		};
+		BDA2A54BB41178038CE0B098 /* Domain */ = {
+			isa = PBXGroup;
+			children = (
+				62E2191831F07928E6C782E7 /* Inbox */,
+				B0C8E9FC57B10E066A0C61DE /* Runs */,
+			);
+			path = Domain;
+			sourceTree = "<group>";
+		};
+		D69EEC615C2CDB5668779EBC /* Inbox */ = {
+			isa = PBXGroup;
+			children = (
+				628D65F91B3ACAD78FF67C99 /* InboxView.swift */,
+			);
+			path = Inbox;
+			sourceTree = "<group>";
+		};
+		E16BC426C06C40935B8219B2 /* HibroUITests */ = {
+			isa = PBXGroup;
+			children = (
+				F8288CB22F5ADC61C6A7A191 /* HibroUITests.swift */,
+			);
+			path = HibroUITests;
+			sourceTree = "<group>";
+		};
+		E2C0E6436BBBB7A2891464EE /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				62B94EE4E5E151CC2AFA4373 /* Hibro.app */,
+				8C9B71C7615E22412DFD6C50 /* HibroTests.xctest */,
+				4D5779639F263511AA1C456A /* HibroUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		E76349AE58626DBD65ED17D9 /* Conversations */ = {
+			isa = PBXGroup;
+			children = (
+				E2A313BA71EC3C67232BF6F3 /* ConversationsView.swift */,
+			);
+			path = Conversations;
+			sourceTree = "<group>";
+		};
+		EFF353730353F89991B9B98A /* Hibro */ = {
+			isa = PBXGroup;
+			children = (
+				8215842E2CD185CD745126AA /* App */,
+				F036305359E88EE726B28A1A /* Core */,
+				7C3CCDCEF37A1D629268AD7F /* Design */,
+				BDA2A54BB41178038CE0B098 /* Domain */,
+				A28916450A267F5AEF1F579D /* Features */,
+				A11FAC823DC6F81395FA0D5C /* Resources */,
+				9F7EAF0DA797EC9B5D604B7F /* Security */,
+			);
+			path = Hibro;
+			sourceTree = "<group>";
+		};
+		F036305359E88EE726B28A1A /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				CC38124AC879C6D549DE6128 /* CoreAPI.swift */,
+				A545185A175126D13298257A /* KeychainStore.swift */,
+				916B2E84C33D6FAE6F336FE6 /* Models.swift */,
+				A1AC4A95F5F3E1021D7EDFDC /* OAuthCoordinator.swift */,
+				AEFED4E52FC65C4FA74A4D19 /* PKCE.swift */,
+				CB042A95C34ECC33552A6333 /* SSEClient.swift */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		1172FAA03A986F4EFB58C9B5 /* Hibro */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CC65455103AD9DB7E4A01203 /* Build configuration list for PBXNativeTarget "Hibro" */;
+			buildPhases = (
+				06693637AB7687B4712F542B /* Sources */,
+				91946536436B7359ECF4948F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Hibro;
+			packageProductDependencies = (
+			);
+			productName = Hibro;
+			productReference = 62B94EE4E5E151CC2AFA4373 /* Hibro.app */;
+			productType = "com.apple.product-type.application";
+		};
+		A990CDDD38E23CDBD3C4D82F /* HibroTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 83E64B7F17D15224E3F4ADA4 /* Build configuration list for PBXNativeTarget "HibroTests" */;
+			buildPhases = (
+				F2DB906B74D66AB8DADD42F9 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				9D4C4C3C5F669B39E078B0B0 /* PBXTargetDependency */,
+			);
+			name = HibroTests;
+			packageProductDependencies = (
+			);
+			productName = HibroTests;
+			productReference = 8C9B71C7615E22412DFD6C50 /* HibroTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		BED6EDC006C9B7BB94F20AD5 /* HibroUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 849031B2960BFD60CEED7643 /* Build configuration list for PBXNativeTarget "HibroUITests" */;
+			buildPhases = (
+				02120580410B0ADDAFF90CBC /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				7D11C830D86DD7B22E698951 /* PBXTargetDependency */,
+			);
+			name = HibroUITests;
+			packageProductDependencies = (
+			);
+			productName = HibroUITests;
+			productReference = 4D5779639F263511AA1C456A /* HibroUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		59F8A112CC80A20F0E733C1C /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					1172FAA03A986F4EFB58C9B5 = {
+						ProvisioningStyle = Automatic;
+					};
+					A990CDDD38E23CDBD3C4D82F = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+					BED6EDC006C9B7BB94F20AD5 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+						TestTargetID = 1172FAA03A986F4EFB58C9B5;
+					};
+				};
+			};
+			buildConfigurationList = C5964DABD869570E1C473568 /* Build configuration list for PBXProject "Hibro" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 8304E512CA24DAEF61F355FD;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = E2C0E6436BBBB7A2891464EE /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				1172FAA03A986F4EFB58C9B5 /* Hibro */,
+				A990CDDD38E23CDBD3C4D82F /* HibroTests */,
+				BED6EDC006C9B7BB94F20AD5 /* HibroUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		91946536436B7359ECF4948F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D3BB1E82EB05224E37C35D5A /* Assets.xcassets in Resources */,
+				9D9564ACBEBDF595D7D6E8E5 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		02120580410B0ADDAFF90CBC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				34C4047118631774B52D5D7D /* HibroUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		06693637AB7687B4712F542B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				737700BFBCD626E4B4F12B11 /* AgentsView.swift in Sources */,
+				BD1D4E859742C617F87E0CD2 /* AppModel.swift in Sources */,
+				04A3D4B6CA82FD20A796EF66 /* AppShellView.swift in Sources */,
+				30E655DA946201CA62F94ED1 /* ApprovalAuthorizer.swift in Sources */,
+				17CD2BE7C1A78B1D5EB3564B /* ArtifactsView.swift in Sources */,
+				6C6885CFB03635ABEE44070D /* Components.swift in Sources */,
+				B2597E34CA07F42FD4F71791 /* ConversationsView.swift in Sources */,
+				D223D08E1644E10BB39702C8 /* CoreAPI.swift in Sources */,
+				AACD09953794FE5EA854E4E3 /* DemoData.swift in Sources */,
+				3BBFD6097B5B26E678629FBD /* HibroApp.swift in Sources */,
+				DE8383066EDC063A663328E8 /* HibroTheme.swift in Sources */,
+				058159C9676BEBBA49E7A51F /* HomeView.swift in Sources */,
+				533981B4411C293B77BF045B /* InboxItem.swift in Sources */,
+				27B20F3A6A80DFFEFF116053 /* InboxView.swift in Sources */,
+				0FF4B06D48506D220AD16061 /* KeychainStore.swift in Sources */,
+				8FCB70BC5E40FD0B8D1D82DC /* Models.swift in Sources */,
+				C2B4614921094A3741B86281 /* MoreView.swift in Sources */,
+				C6CF6704A9126BCE6C53DBD6 /* OAuthCoordinator.swift in Sources */,
+				A050A5825B47AB8B04DBCA80 /* PKCE.swift in Sources */,
+				244FF18962D9A43093915045 /* QALaunchConfiguration.swift in Sources */,
+				07F0AB7AC37AF0E639AB0B6A /* RootView.swift in Sources */,
+				461323BAB1014FBF7DC876D8 /* RunPresentation.swift in Sources */,
+				CC60BE84ED36CB874FB9AB1F /* RunsView.swift in Sources */,
+				091F7A35FD6BB20DF5AE57CD /* SSEClient.swift in Sources */,
+				5F52CE525E9531C6BE07EC41 /* ServerSetupView.swift in Sources */,
+				1926007AB2B2C83C6865F11C /* SettingsView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F2DB906B74D66AB8DADD42F9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B9BD4E141443E7BAB760C8DC /* InboxTests.swift in Sources */,
+				BB705451BE61B979B068B8CD /* PKCETests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		7D11C830D86DD7B22E698951 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1172FAA03A986F4EFB58C9B5 /* Hibro */;
+			targetProxy = D6AC9D77AE62D0A588E0DF1B /* PBXContainerItemProxy */;
+		};
+		9D4C4C3C5F669B39E078B0B0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1172FAA03A986F4EFB58C9B5 /* Hibro */;
+			targetProxy = AE9F85FF2E0A3E4D7D48D6D6 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		7500426509671F27687F74D4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = targeted;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		7E18DD303B8955154FA1B0BA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = 432D2J4455;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Hibro/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.bryan.hibro;
+				PRODUCT_NAME = Hibro;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		8C6036E3D280F5E811410951 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_STRICT_CONCURRENCY = targeted;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		996811247A54E90A03725F24 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = 432D2J4455;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Hibro/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.bryan.hibro;
+				PRODUCT_NAME = Hibro;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		C3F4A4EC23BEA0AB4A6FD8E5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.bryan.hibro.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Hibro.app/Hibro";
+			};
+			name = Debug;
+		};
+		F210EC6359D51F00E86DB1AA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.bryan.hibro.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Hibro.app/Hibro";
+			};
+			name = Release;
+		};
+		F736548C997E94D46AE48DCF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.bryan.hibro.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Hibro;
+			};
+			name = Release;
+		};
+		F75E9EF1C06EDA22669D19D8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.bryan.hibro.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Hibro;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		83E64B7F17D15224E3F4ADA4 /* Build configuration list for PBXNativeTarget "HibroTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C3F4A4EC23BEA0AB4A6FD8E5 /* Debug */,
+				F210EC6359D51F00E86DB1AA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		849031B2960BFD60CEED7643 /* Build configuration list for PBXNativeTarget "HibroUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F75E9EF1C06EDA22669D19D8 /* Debug */,
+				F736548C997E94D46AE48DCF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		C5964DABD869570E1C473568 /* Build configuration list for PBXProject "Hibro" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7500426509671F27687F74D4 /* Debug */,
+				8C6036E3D280F5E811410951 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		CC65455103AD9DB7E4A01203 /* Build configuration list for PBXNativeTarget "Hibro" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7E18DD303B8955154FA1B0BA /* Debug */,
+				996811247A54E90A03725F24 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 59F8A112CC80A20F0E733C1C /* Project object */;
+}

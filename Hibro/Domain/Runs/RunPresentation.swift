@@ -49,7 +49,7 @@ extension CoreRun {
             return RunFailurePresentation(
                 title: "运行已取消",
                 message: "这次执行在完成前被停止。",
-                suggestion: "如需继续，可以使用相同目标重新运行。",
+                suggestion: "如需继续，可以使用相同目标重新执行。",
                 technicalDetail: rawMessage
             )
         }
@@ -65,7 +65,7 @@ extension CoreRun {
             return RunFailurePresentation(
                 title: "审批未通过",
                 message: "Agent 请求的操作没有获得允许，因此运行已停止。",
-                suggestion: "确认操作安全后重新运行，并及时处理新的审批请求。",
+                suggestion: "确认操作安全后重新执行，并及时处理新的审批请求。",
                 technicalDetail: rawMessage
             )
         }

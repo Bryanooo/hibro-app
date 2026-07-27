@@ -28,6 +28,7 @@ struct AppShellView: View {
             if !model.isDemoMode,
                (
                    model.connectionState == .offline
+                       || model.connectionState == .degraded
                        || model.connectionState == .reconnecting
                ) {
                 connectionBanner
@@ -59,9 +60,7 @@ struct AppShellView: View {
 
     private var connectionBanner: some View {
         HStack(spacing: 10) {
-            Image(systemName: model.connectionState == .offline
-                ? "wifi.slash"
-                : "arrow.triangle.2.circlepath")
+            Image(systemName: connectionSymbol)
             VStack(alignment: .leading, spacing: 2) {
                 Text(model.connectionState.title)
                     .font(.caption.weight(.semibold))
@@ -86,6 +85,19 @@ struct AppShellView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 9)
         .background(.regularMaterial)
+    }
+
+    private var connectionSymbol: String {
+        switch model.connectionState {
+        case .offline:
+            "wifi.slash"
+        case .degraded:
+            "exclamationmark.icloud"
+        case .reconnecting:
+            "arrow.triangle.2.circlepath"
+        case .connecting, .connected:
+            "checkmark.icloud"
+        }
     }
 
     private var sectionBinding: Binding<AppSection> {

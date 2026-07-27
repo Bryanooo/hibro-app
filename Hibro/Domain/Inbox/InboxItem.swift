@@ -32,7 +32,7 @@ enum InboxItemKind: String, CaseIterable, Codable, Hashable, Sendable {
         switch self {
         case .approval: "待审批"
         case .question: "Agent 提问"
-        case .runFailed: "运行失败"
+        case .runFailed: "任务失败"
         case .completed: "已完成"
         }
     }
@@ -60,6 +60,7 @@ struct InboxItem: Codable, Identifiable, Hashable, Sendable {
     let runID: String?
     let conversationID: String?
     let approvalSource: InboxApprovalSource?
+    var approvalExternalID: String? = nil
 
     var requiresAttention: Bool { kind.requiresAttention }
 }
@@ -101,7 +102,8 @@ extension InboxItem {
             createdAt: coreItem.createdAt,
             runID: coreItem.runId,
             conversationID: coreItem.conversationId,
-            approvalSource: approvalSource
+            approvalSource: approvalSource,
+            approvalExternalID: coreItem.approval?.externalId
         )
     }
 }
@@ -142,6 +144,9 @@ enum InboxBuilder {
                         conversationID: detail.conversation.id,
                         approvalSource: kind == .approval
                             ? .conversation(activityID: activity.id)
+                            : nil,
+                        approvalExternalID: kind == .approval
+                            ? activity.approval?.externalId
                             : nil
                     )
                 )
@@ -172,7 +177,8 @@ enum InboxBuilder {
                         createdAt: approval.timestamp,
                         runID: run.id,
                         conversationID: nil,
-                        approvalSource: .run(externalID: approval.externalID)
+                        approvalSource: .run(externalID: approval.externalID),
+                        approvalExternalID: approval.externalID
                     )
                 )
             }

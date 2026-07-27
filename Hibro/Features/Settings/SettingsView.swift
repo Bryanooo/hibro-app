@@ -38,14 +38,20 @@ struct SettingsView: View {
                             : "局域网调试"
                 )
                 LabeledContent(
-                    "API",
+                    "接口版本",
                     value: model.bootstrap?.apiVersion ?? "—"
                 )
                 LabeledContent(
-                    "Core 连接",
+                    "服务访问",
                     value: model.isDemoMode
                         ? "演示"
-                        : model.connectionState.title
+                        : model.connectivity.apiState.title
+                )
+                LabeledContent(
+                    "实时同步",
+                    value: model.isDemoMode
+                        ? "演示"
+                        : model.connectivity.realtimeState.title
                 )
                 Button {
                     Task { await model.refreshFromUser() }

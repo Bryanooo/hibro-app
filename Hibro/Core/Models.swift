@@ -307,6 +307,37 @@ struct CoreArtifact: Codable, Hashable, Sendable, Identifiable {
     let createdAt: String
 }
 
+extension CoreArtifact {
+    var isLegacyAgentResult: Bool {
+        fileName == "agent-result.md" && relativePath == nil
+    }
+
+    var isImage: Bool {
+        if previewKind == "image" || contentType.lowercased().hasPrefix("image/") {
+            return true
+        }
+        guard let fileName else { return false }
+        return ["png", "jpg", "jpeg", "gif", "webp", "heic"].contains(
+            URL(fileURLWithPath: fileName).pathExtension.lowercased()
+        )
+    }
+
+    var isContentAvailable: Bool {
+        transferStatus == nil || transferStatus == "available"
+    }
+
+    var displaySymbol: String {
+        switch previewKind {
+        case "image": "photo"
+        case "pdf": "doc.richtext"
+        case "video": "play.rectangle"
+        case "audio": "waveform"
+        case "code": "chevron.left.forwardslash.chevron.right"
+        default: isImage ? "photo" : "doc.text"
+        }
+    }
+}
+
 struct ArtifactStorage: Codable, Hashable, Sendable {
     let driver: String
     let objectKey: String?

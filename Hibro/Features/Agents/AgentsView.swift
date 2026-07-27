@@ -117,7 +117,7 @@ private struct AgentCard: View {
                 .tint(HibroTheme.accent)
                 .foregroundStyle(.black)
                 Button(action: onRun) {
-                    Label("运行", systemImage: "play.fill")
+                    Label("任务", systemImage: "checklist")
                 }
                 .buttonStyle(.bordered)
             }

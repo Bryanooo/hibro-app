@@ -2,6 +2,59 @@ import XCTest
 @testable import Hibro
 
 final class InboxTests: XCTestCase {
+    func testConnectivityRequiresThreeAvailabilityFailuresBeforeOffline() {
+        var connectivity = CoreConnectivity()
+        connectivity.recordAPISuccess()
+
+        connectivity.recordAPIFailure(message: "第一次失败")
+        XCTAssertEqual(connectivity.apiState, .degraded)
+        XCTAssertEqual(connectivity.presentationState, .degraded)
+
+        connectivity.recordAPIFailure(message: "第二次失败")
+        XCTAssertEqual(connectivity.apiState, .degraded)
+
+        connectivity.recordAPIFailure(message: "第三次失败")
+        XCTAssertEqual(connectivity.apiState, .offline)
+        XCTAssertEqual(connectivity.presentationState, .offline)
+    }
+
+    func testConnectivitySuccessClearsFailureHistory() {
+        var connectivity = CoreConnectivity()
+        connectivity.recordAPIFailure(message: "第一次失败")
+        connectivity.recordAPIFailure(message: "第二次失败")
+        connectivity.recordAPISuccess()
+
+        XCTAssertEqual(connectivity.apiState, .connected)
+        XCTAssertEqual(connectivity.consecutiveAPIFailures, 0)
+        XCTAssertNil(connectivity.presentationMessage)
+    }
+
+    func testRealtimeStateCannotOverrideAnOfflineAPI() {
+        var connectivity = CoreConnectivity()
+        connectivity.recordAPIFailure(
+            message: "Core 不可达",
+            immediatelyOffline: true
+        )
+        connectivity.recordRealtimeConnected()
+
+        XCTAssertEqual(connectivity.apiState, .offline)
+        XCTAssertEqual(connectivity.realtimeState, .connected)
+        XCTAssertEqual(connectivity.presentationState, .offline)
+    }
+
+    func testRealtimeReconnectDoesNotReportTheAPIAsOffline() {
+        var connectivity = CoreConnectivity()
+        connectivity.recordAPISuccess()
+        connectivity.recordRealtimeReconnecting(message: "实时通道恢复中")
+
+        XCTAssertEqual(connectivity.apiState, .connected)
+        XCTAssertEqual(connectivity.presentationState, .reconnecting)
+        XCTAssertEqual(
+            connectivity.presentationMessage,
+            "实时通道恢复中"
+        )
+    }
+
     func testGreetingUsesRealDisplayNameAndAvoidsGenericOwnerLabel() {
         let namedUser = CoreUser(
             id: "usr_named",
@@ -178,6 +231,100 @@ final class InboxTests: XCTestCase {
         XCTAssertEqual(
             item.approvalSource,
             .run(externalID: "approval_1")
+        )
+        XCTAssertEqual(item.approvalExternalID, "approval_1")
+    }
+
+    func testCoreInboxPreservesConversationApprovalExternalIdentity() throws {
+        let data = Data(
+            """
+            {
+              "items": [{
+                "id": "activity:activity_1",
+                "kind": "approval",
+                "title": "允许执行命令",
+                "summary": "生成图片",
+                "createdAt": "2026-07-26T12:00:00.000Z",
+                "requiresAttention": true,
+                "runId": "run_1",
+                "conversationId": "conversation_1",
+                "approval": {
+                  "source": "conversation",
+                  "activityId": "activity_1",
+                  "externalId": "approval_1",
+                  "decisions": ["allow_once", "deny"],
+                  "resolvable": true,
+                  "reason": null
+                }
+              }],
+              "serverTime": "2026-07-26T12:00:01.000Z"
+            }
+            """.utf8
+        )
+
+        let response = try JSONDecoder().decode(
+            CoreInboxResponse.self,
+            from: data
+        )
+        let item = try XCTUnwrap(
+            response.items.first.flatMap(InboxItem.init(coreItem:))
+        )
+
+        XCTAssertEqual(
+            item.approvalSource,
+            .conversation(activityID: "activity_1")
+        )
+        XCTAssertEqual(item.approvalExternalID, "approval_1")
+        XCTAssertEqual(item.runID, "run_1")
+    }
+
+    @MainActor
+    func testConversationDecisionImmediatelyClearsEveryApprovalSurface() async {
+        let model = AppModel()
+        model.loadDemo()
+        model.serverInboxItems = [
+            InboxItem(
+                id: "activity:activity_demo_approval",
+                kind: .approval,
+                title: "部署 Core 更新",
+                summary: "等待审批",
+                createdAt: "2026-07-26T12:00:00.000Z",
+                runID: "run_demo_done",
+                conversationID: "conv_demo_review",
+                approvalSource: .conversation(
+                    activityID: "activity_demo_approval"
+                ),
+                approvalExternalID: "approval_demo"
+            ),
+            InboxItem(
+                id: "run-approval:run_demo_done:approval_demo",
+                kind: .approval,
+                title: "部署 Core 更新",
+                summary: "同一审批的 Run 入口",
+                createdAt: "2026-07-26T12:00:00.000Z",
+                runID: "run_demo_done",
+                conversationID: "conv_demo_review",
+                approvalSource: .run(externalID: "approval_demo"),
+                approvalExternalID: "approval_demo"
+            ),
+        ]
+
+        XCTAssertEqual(model.inboxItems.count, 2)
+        let succeeded = await model.decideApproval(
+            conversationID: "conv_demo_review",
+            activityID: "activity_demo_approval",
+            decision: .allowOnce
+        )
+
+        XCTAssertTrue(succeeded)
+        XCTAssertTrue(model.inboxItems.isEmpty)
+        XCTAssertTrue(
+            model.handledActivityIDs.contains("activity_demo_approval")
+        )
+        XCTAssertTrue(
+            model.handledRunApprovalIDs.contains(
+                "run_demo_done:approval_demo"
+            )
         )
     }
 

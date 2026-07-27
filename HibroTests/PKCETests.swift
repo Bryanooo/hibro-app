@@ -77,6 +77,51 @@ final class PKCETests: XCTestCase {
         XCTAssertTrue(response.tokenSet.expiresAt > Date())
     }
 
+    func testConcurrentRequestsShareOneRefreshRotation() async throws {
+        RefreshURLProtocol.reset()
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [RefreshURLProtocol.self]
+        let api = CoreAPI(
+            session: URLSession(configuration: configuration),
+            saveSession: { _ in }
+        )
+        await api.configure(
+            baseURL: URL(string: "https://hibro.test")!,
+            tokens: OAuthTokenSet(
+                accessToken: "expired-access",
+                refreshToken: "original-refresh",
+                tokenType: "Bearer",
+                expiresAt: .distantPast,
+                scope: "hibro.read"
+            )
+        )
+
+        let requests = try await withThrowingTaskGroup(
+            of: URLRequest.self,
+            returning: [URLRequest].self
+        ) { group in
+            for _ in 0..<8 {
+                group.addTask {
+                    try await api.globalEventRequest()
+                }
+            }
+            var values: [URLRequest] = []
+            for try await request in group {
+                values.append(request)
+            }
+            return values
+        }
+
+        XCTAssertEqual(RefreshURLProtocol.count, 1)
+        XCTAssertEqual(requests.count, 8)
+        XCTAssertTrue(
+            requests.allSatisfy {
+                $0.value(forHTTPHeaderField: "authorization")
+                    == "Bearer refreshed-access"
+            }
+        )
+    }
+
     func testBootstrapResponseMatchesCoreShape() throws {
         let data = Data(
             """
@@ -201,4 +246,99 @@ final class PKCETests: XCTestCase {
         XCTAssertEqual(artifact.fileName, "report.pdf")
         XCTAssertEqual(artifact.storage?.driver, "oss")
     }
+
+    func testOnlyLegacySyntheticMarkdownIsHidden() throws {
+        let legacy = try JSONDecoder().decode(
+            CoreArtifact.self,
+            from: Data(
+                """
+                {
+                  "id": "artifact_legacy",
+                  "coreRunId": "run_123",
+                  "nodeId": "node_123",
+                  "localArtifactId": "run_123",
+                  "title": "Agent reply",
+                  "contentType": "text/markdown",
+                  "sizeBytes": 12,
+                  "fileName": "agent-result.md",
+                  "createdAt": "2026-07-25T16:00:00.000Z"
+                }
+                """.utf8
+            )
+        )
+        let realFile = try JSONDecoder().decode(
+            CoreArtifact.self,
+            from: Data(
+                """
+                {
+                  "id": "artifact_real",
+                  "coreRunId": "run_123",
+                  "nodeId": "node_123",
+                  "localArtifactId": "artifact_real",
+                  "title": "agent-result.md",
+                  "contentType": "text/markdown",
+                  "sizeBytes": 12,
+                  "fileName": "agent-result.md",
+                  "relativePath": "agent-result.md",
+                  "createdAt": "2026-07-25T16:00:00.000Z"
+                }
+                """.utf8
+            )
+        )
+
+        XCTAssertTrue(legacy.isLegacyAgentResult)
+        XCTAssertFalse(realFile.isLegacyAgentResult)
+    }
+}
+
+private final class RefreshURLProtocol: URLProtocol, @unchecked Sendable {
+    private static let lock = NSLock()
+    nonisolated(unsafe) private static var requestCount = 0
+
+    static var count: Int {
+        lock.withLock { requestCount }
+    }
+
+    static func reset() {
+        lock.withLock { requestCount = 0 }
+    }
+
+    override class func canInit(with request: URLRequest) -> Bool {
+        request.url?.path == "/oauth/token"
+    }
+
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest {
+        request
+    }
+
+    override func startLoading() {
+        Self.lock.withLock { Self.requestCount += 1 }
+        Thread.sleep(forTimeInterval: 0.1)
+        let data = Data(
+            """
+            {
+              "access_token": "refreshed-access",
+              "refresh_token": "refreshed-refresh",
+              "token_type": "Bearer",
+              "expires_in": 900,
+              "scope": "hibro.read"
+            }
+            """.utf8
+        )
+        let response = HTTPURLResponse(
+            url: request.url!,
+            statusCode: 200,
+            httpVersion: "HTTP/1.1",
+            headerFields: ["content-type": "application/json"]
+        )!
+        client?.urlProtocol(
+            self,
+            didReceive: response,
+            cacheStoragePolicy: .notAllowed
+        )
+        client?.urlProtocol(self, didLoad: data)
+        client?.urlProtocolDidFinishLoading(self)
+    }
+
+    override func stopLoading() {}
 }

@@ -7,56 +7,109 @@ struct RunsView: View {
     @State private var showingComposer = false
 
     var body: some View {
-        Group {
-            if filteredRuns.isEmpty {
-                EmptyStateView(
-                    symbol: "play.circle",
-                    title: "没有运行记录",
-                    message: "向 Agent 发起任务后，状态和结果会显示在这里。"
-                )
-            } else {
-                List(filteredRuns) { run in
-                    NavigationLink {
-                        RunDetailView(runID: run.id)
-                    } label: {
-                        RunRow(run: run)
-                            .padding(.vertical, 6)
-                    }
-                    .listRowBackground(
-                        model.highlightedRunID == run.id
-                            ? HibroTheme.accent.opacity(0.07)
-                            : Color.clear
+        ScrollView {
+            VStack(alignment: .leading, spacing: 22) {
+                taskSummary
+                filters
+                VStack(alignment: .leading, spacing: 12) {
+                    SectionHeader(
+                        title: "任务列表",
+                        caption: taskListCaption
                     )
+                    if filteredRuns.isEmpty {
+                        EmptyStateView(
+                            symbol: search.isEmpty ? "checklist" : "magnifyingglass",
+                            title: search.isEmpty ? "还没有任务" : "没有匹配的任务",
+                            message: search.isEmpty
+                                ? "向 Agent 提交目标后，进度和结果会显示在这里。"
+                                : "尝试其他搜索词或状态筛选。"
+                        )
+                        .frame(maxWidth: .infinity, minHeight: 230)
+                        .hibroPanel()
+                    } else {
+                        LazyVStack(spacing: 12) {
+                            ForEach(filteredRuns) { run in
+                                NavigationLink {
+                                    RunDetailView(runID: run.id)
+                                } label: {
+                                    RunRow(run: run)
+                                        .padding(16)
+                                        .background(
+                                            model.highlightedRunID == run.id
+                                                ? HibroTheme.accent.opacity(0.07)
+                                                : Color.clear
+                                        )
+                                        .hibroPanel()
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
                 }
-                .listStyle(.insetGrouped)
             }
+            .padding(22)
+            .frame(maxWidth: 1_000, alignment: .leading)
+            .frame(maxWidth: .infinity)
         }
-        .navigationTitle("运行")
-        .searchable(text: $search, prompt: "搜索任务、Agent 或 Run ID")
-        .safeAreaInset(edge: .top) {
-            Picker("状态", selection: $filter) {
-                Text("全部").tag("all")
-                Text("进行中").tag("active")
-                Text("已完成").tag("completed")
-                Text("失败").tag("failed")
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal)
-            .padding(.vertical, 8)
-            .background(.ultraThinMaterial)
-        }
+        .navigationTitle("任务")
+        .searchable(text: $search, prompt: "搜索目标、Agent 或任务 ID")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     showingComposer = true
                 } label: {
-                    Label("发起运行", systemImage: "play.fill")
+                    Label("新任务", systemImage: "plus")
                 }
             }
         }
         .sheet(isPresented: $showingComposer) {
             RunComposerSheet()
         }
+    }
+
+    private var taskSummary: some View {
+        HStack(spacing: 0) {
+            TaskMetric(
+                value: model.runs.filter(\.isActive).count,
+                title: "进行中",
+                color: HibroTheme.cyan
+            )
+            Divider().frame(height: 42)
+            TaskMetric(
+                value: model.runs.filter { $0.status == "completed" }.count,
+                title: "已完成",
+                color: HibroTheme.accent
+            )
+            Divider().frame(height: 42)
+            TaskMetric(
+                value: model.runs.filter {
+                    ["failed", "timed_out"].contains($0.status)
+                }.count,
+                title: "需关注",
+                color: HibroTheme.danger
+            )
+        }
+        .padding(.vertical, 16)
+        .hibroPanel()
+    }
+
+    private var filters: some View {
+        Picker("任务状态", selection: $filter) {
+            Text("全部").tag("all")
+            Text("进行中").tag("active")
+            Text("已完成").tag("completed")
+            Text("需关注").tag("failed")
+        }
+        .pickerStyle(.segmented)
+        .frame(maxWidth: 560)
+        .accessibilityIdentifier("task-status-filter")
+    }
+
+    private var taskListCaption: String {
+        if filter == "all" {
+            return "\(filteredRuns.count) 个目标，按最近更新排序"
+        }
+        return "当前筛选下共 \(filteredRuns.count) 个目标"
     }
 
     private var filteredRuns: [CoreRun] {
@@ -74,6 +127,26 @@ struct RunsView: View {
                 || model.agentName(run.agentId).localizedCaseInsensitiveContains(query)
             return stateMatch && searchMatch
         }
+        .sorted { $0.updatedAt > $1.updatedAt }
+    }
+}
+
+private struct TaskMetric: View {
+    let value: Int
+    let title: String
+    let color: Color
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Text("\(value)")
+                .font(.title3.bold().monospacedDigit())
+                .foregroundStyle(color)
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -83,7 +156,7 @@ private struct RunRow: View {
 
     var body: some View {
         HStack(spacing: 13) {
-            Image(systemName: run.status == "running" ? "waveform" : "play.fill")
+            Image(systemName: run.status == "running" ? "waveform" : "checkmark.square")
                 .foregroundStyle(HibroTheme.statusColor(run.status))
                 .frame(width: 40, height: 40)
                 .background(
@@ -101,6 +174,7 @@ private struct RunRow: View {
             Spacer()
             StatusPill(status: run.status)
         }
+        .contentShape(Rectangle())
     }
 }
 
@@ -159,7 +233,7 @@ struct RunDetailView: View {
                 )
             }
         }
-        .navigationTitle("运行详情")
+        .navigationTitle("任务详情")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -182,23 +256,23 @@ struct RunDetailView: View {
             await model.openRun(runID)
         }
         .confirmationDialog(
-            "确认停止这次运行？",
+            "确认停止这个任务？",
             isPresented: $confirmingCancel,
             titleVisibility: .visible
         ) {
-            Button("停止运行", role: .destructive) {
+            Button("停止任务", role: .destructive) {
                 Task { await model.cancelRun(runID) }
             }
-            Button("继续运行", role: .cancel) {}
+            Button("继续任务", role: .cancel) {}
         } message: {
             Text("Agent 当前正在执行的工作会被取消。")
         }
         .confirmationDialog(
-            "使用相同目标重新运行？",
+            "使用相同目标重新执行？",
             isPresented: $confirmingRetry,
             titleVisibility: .visible
         ) {
-            Button("重新运行") {
+            Button("重新执行") {
                 guard let run else { return }
                 Task {
                     if await model.retryRun(run) {
@@ -208,7 +282,7 @@ struct RunDetailView: View {
             }
             Button("取消", role: .cancel) {}
         } message: {
-            Text("将沿用原来的 Agent、目标和会话设置，创建一次新的运行。")
+            Text("将沿用原来的 Agent、目标和会话设置，创建一个新任务。")
         }
     }
 
@@ -488,7 +562,7 @@ struct RunDetailView: View {
             sectionEmptyState(
                 symbol: "bubble.left.and.bubble.right",
                 title: "没有关联对话",
-                message: "这次运行没有可展示的会话上下文。"
+                message: "这个任务没有可展示的会话上下文。"
             )
         }
     }
@@ -546,7 +620,7 @@ struct RunDetailView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .hibroPanel()
             } else {
-                Text("这次运行没有返回可展示的文本结果。")
+                Text("这个任务没有返回可展示的文本结果。")
                     .foregroundStyle(.secondary)
                     .padding(18)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -683,8 +757,8 @@ private extension CoreRunEvent {
         switch type {
         case "run.accepted": return "Node 已接受运行"
         case "run.started", "engine.started": return "Agent 开始执行"
-        case "run.completed", "engine.completed": return "运行完成"
-        case "run.failed", "engine.failed": return "运行失败"
+        case "run.completed", "engine.completed": return "任务完成"
+        case "run.failed", "engine.failed": return "任务失败"
         case "engine.approval.resolved": return "审批已处理"
         case "artifact.created": return "生成产出"
         default:

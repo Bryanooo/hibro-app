@@ -1,6 +1,14 @@
 import Foundation
 
 enum SSEClient {
+    private static let session: URLSession = {
+        let configuration = URLSessionConfiguration.default
+        configuration.waitsForConnectivity = true
+        configuration.timeoutIntervalForRequest = 30
+        configuration.timeoutIntervalForResource = 24 * 60 * 60
+        return URLSession(configuration: configuration)
+    }()
+
     static func conversationEvents(
         request: URLRequest
     ) -> AsyncThrowingStream<ConversationEvent, Error> {
@@ -20,7 +28,7 @@ enum SSEClient {
         AsyncThrowingStream { continuation in
             let task = Task {
                 do {
-                    let (bytes, response) = try await URLSession.shared.bytes(for: request)
+                    let (bytes, response) = try await session.bytes(for: request)
                     try CoreAPI.validate(response)
                     var dataLines: [String] = []
                     for try await line in bytes.lines {
@@ -28,10 +36,22 @@ enum SSEClient {
                         if line.isEmpty {
                             if !dataLines.isEmpty {
                                 let payload = dataLines.joined(separator: "\n")
-                                let data = Data(payload.utf8)
-                                let event = try JSONDecoder().decode(type, from: data)
-                                continuation.yield(event)
                                 dataLines.removeAll(keepingCapacity: true)
+                                let data = Data(payload.utf8)
+                                do {
+                                    let event = try JSONDecoder().decode(
+                                        type,
+                                        from: data
+                                    )
+                                    continuation.yield(event)
+                                } catch {
+                                    #if DEBUG
+                                    print(
+                                        "[Hibro SSE] Ignored malformed event: "
+                                            + error.localizedDescription
+                                    )
+                                    #endif
+                                }
                             }
                         } else if line.hasPrefix("data:") {
                             dataLines.append(

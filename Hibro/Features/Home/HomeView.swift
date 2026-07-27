@@ -75,6 +75,7 @@ struct HomeView: View {
                 VStack(spacing: 3) {
                     Text("\(attentionItems.count)")
                         .font(.title2.bold())
+                        .accessibilityIdentifier("home.attentionCount")
                     Text("待处理")
                         .font(.caption2)
                 }
@@ -154,7 +155,7 @@ struct HomeView: View {
                 VStack(spacing: 14) {
                     EmptyStateView(
                         symbol: "moon.zzz",
-                        title: "当前没有运行中的任务",
+                        title: "当前没有进行中的任务",
                         message: "创建一个目标，Hibro 会安排 Agent 执行。"
                     )
                     Button {
@@ -224,26 +225,35 @@ struct HomeView: View {
 
     private var systemHealth: some View {
         let online = model.nodes.filter { $0.status == "online" }.count
-        return HStack(spacing: 13) {
-            Image(systemName: online == model.nodes.count ? "checkmark.shield.fill" : "exclamationmark.shield.fill")
-                .foregroundStyle(online == model.nodes.count ? HibroTheme.accent : HibroTheme.orange)
-            VStack(alignment: .leading, spacing: 3) {
-                Text("系统状态")
-                    .font(.subheadline.weight(.semibold))
-                Text("\(online)/\(model.nodes.count) Nodes 在线 · \(model.agents.count) Agents 可用")
+        return NavigationLink {
+            NodesView()
+        } label: {
+            HStack(spacing: 13) {
+                Image(systemName: online == model.nodes.count ? "checkmark.shield.fill" : "exclamationmark.shield.fill")
+                    .foregroundStyle(online == model.nodes.count ? HibroTheme.accent : HibroTheme.orange)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("系统状态")
+                        .font(.subheadline.weight(.semibold))
+                    Text("\(online)/\(model.nodes.count) 节点在线 · \(model.agents.count) Agents 可用")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                if let lastRefreshAt = model.lastRefreshAt {
+                    Text(lastRefreshAt.formatted(.relative(presentation: .named)))
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+                Image(systemName: "chevron.right")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-            if let lastRefreshAt = model.lastRefreshAt {
-                Text(lastRefreshAt.formatted(.relative(presentation: .named)))
-                    .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
         .padding(.horizontal, 4)
         .padding(.vertical, 6)
-        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("home.systemHealth")
     }
 
     private var summary: String {

@@ -26,15 +26,15 @@ final class HibroUITests: XCTestCase {
         goBack()
         goBack()
 
-        openSection("运行")
+        openSection("任务")
         XCTAssertTrue(
-            app.navigationBars["运行"].waitForExistence(timeout: 4)
+            app.navigationBars["任务"].waitForExistence(timeout: 4)
         )
         app.staticTexts[
             "整理 Hibro App 第一版需要完成的功能与优先级"
         ].firstMatch.tap()
         XCTAssertTrue(
-            app.navigationBars["运行详情"].waitForExistence(timeout: 4)
+            app.navigationBars["任务详情"].waitForExistence(timeout: 4)
         )
         XCTAssertTrue(app.buttons["概览"].exists)
         XCTAssertTrue(app.buttons["时间线"].exists)
@@ -70,6 +70,39 @@ final class HibroUITests: XCTestCase {
         XCTAssertTrue(
             app.staticTexts["系统状态"].waitForExistence(timeout: 4)
         )
+    }
+
+    func testTaskStyleAndNodeDiscovery() {
+        launchApp()
+
+        openSection("任务")
+        XCTAssertTrue(
+            app.navigationBars["任务"].waitForExistence(timeout: 4)
+        )
+        XCTAssertTrue(app.staticTexts["任务列表"].exists)
+        XCTAssertTrue(app.segmentedControls["task-status-filter"].exists)
+        XCTAssertTrue(app.staticTexts["进行中"].firstMatch.exists)
+        XCTAssertTrue(app.staticTexts["已完成"].firstMatch.exists)
+        XCTAssertTrue(app.staticTexts["需关注"].firstMatch.exists)
+        capture("task-overview")
+
+        openSection("更多")
+        let nodes = app.staticTexts["节点"].firstMatch
+        XCTAssertTrue(nodes.waitForExistence(timeout: 4))
+        nodes.tap()
+        XCTAssertTrue(
+            app.navigationBars["节点"].waitForExistence(timeout: 4)
+        )
+        XCTAssertTrue(app.staticTexts["执行节点"].exists)
+        XCTAssertTrue(app.staticTexts["Studio Mac"].exists)
+        capture("nodes-overview")
+
+        app.staticTexts["Studio Mac"].tap()
+        XCTAssertTrue(
+            app.navigationBars["Studio Mac"].waitForExistence(timeout: 4)
+        )
+        XCTAssertTrue(app.staticTexts["连接信息"].exists)
+        XCTAssertTrue(app.staticTexts["承载的 Agents"].exists)
     }
 
     func testLandscapePrimaryNavigation() {
@@ -170,6 +203,58 @@ final class HibroUITests: XCTestCase {
         XCTAssertTrue(app.buttons["拒绝"].isHittable)
     }
 
+    func testConversationApprovalSynchronizesHomeAndInbox() {
+        launchApp()
+        XCTAssertEqual(
+            app.staticTexts["home.attentionCount"].label,
+            "2"
+        )
+
+        openSection("对话")
+        app.staticTexts["检查 Core 部署状态"].firstMatch.tap()
+        XCTAssertTrue(
+            app.staticTexts["Agent 正在等待你的决定"]
+                .waitForExistence(timeout: 4)
+        )
+        app.buttons["仅本次"].tap()
+        let confirm = app.buttons["仅本次允许"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 4))
+        confirm.tap()
+        XCTAssertFalse(
+            app.staticTexts["Agent 正在等待你的决定"]
+                .waitForExistence(timeout: 2)
+        )
+
+        openSection("首页")
+        let count = app.staticTexts["home.attentionCount"]
+        XCTAssertTrue(count.waitForExistence(timeout: 4))
+        XCTAssertEqual(count.label, "1")
+
+        openInbox()
+        XCTAssertFalse(app.staticTexts["部署 Core 更新"].firstMatch.exists)
+        XCTAssertTrue(
+            app.staticTexts["是否保留 v1 API 兼容性？"].firstMatch.exists
+        )
+    }
+
+    func testConversationShowsGeneratedImageArtifact() {
+        launchApp()
+        openSection("对话")
+        app.staticTexts["检查 Core 部署状态"].firstMatch.tap()
+
+        let imageArtifact = app.staticTexts["Hibro 状态图"]
+        XCTAssertTrue(imageArtifact.waitForExistence(timeout: 4))
+        imageArtifact.tap()
+        XCTAssertTrue(
+            app.navigationBars["产出详情"].waitForExistence(timeout: 4)
+        )
+        XCTAssertTrue(
+            app.descendants(matching: .any)["artifact.imagePreview"]
+                .waitForExistence(timeout: 4)
+        )
+        capture("conversation-image-artifact")
+    }
+
     func testConversationCollapsesTechnicalDetailsByDefault() {
         launchApp()
         openSection("对话")
@@ -206,12 +291,12 @@ final class HibroUITests: XCTestCase {
         XCTAssertTrue(app.tabBars.firstMatch.exists)
         capture("split-compact-home")
 
-        openSection("运行")
+        openSection("任务")
         app.staticTexts[
             "整理 Hibro App 第一版需要完成的功能与优先级"
         ].firstMatch.tap()
         XCTAssertTrue(
-            app.navigationBars["运行详情"].waitForExistence(timeout: 4)
+            app.navigationBars["任务详情"].waitForExistence(timeout: 4)
         )
         XCTAssertTrue(app.staticTexts["执行流程"].exists)
         capture("split-compact-run")
@@ -219,12 +304,12 @@ final class HibroUITests: XCTestCase {
 
     func testRunDetailInformationSections() {
         launchApp()
-        openSection("运行")
+        openSection("任务")
         app.staticTexts[
             "整理 Hibro App 第一版需要完成的功能与优先级"
         ].firstMatch.tap()
         XCTAssertTrue(
-            app.navigationBars["运行详情"].waitForExistence(timeout: 4)
+            app.navigationBars["任务详情"].waitForExistence(timeout: 4)
         )
 
         app.buttons["时间线"].tap()

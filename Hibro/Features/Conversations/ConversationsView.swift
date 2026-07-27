@@ -144,6 +144,11 @@ struct ConversationDetailView: View {
                             TechnicalActivityGroup(activities: activities)
                         }
                     }
+                    if !relatedArtifacts(in: detail).isEmpty {
+                        ConversationArtifactGallery(
+                            artifacts: relatedArtifacts(in: detail)
+                        )
+                    }
                 }
                 .padding(18)
                 .frame(maxWidth: 820)
@@ -162,6 +167,24 @@ struct ConversationDetailView: View {
                 }
             }
         }
+    }
+
+    private func relatedArtifacts(
+        in detail: ConversationDetail
+    ) -> [CoreArtifact] {
+        var runIDs = Set(detail.messages.compactMap(\.runId))
+        runIDs.formUnion(detail.activities.compactMap(\.runId))
+        if let activeRunID = detail.conversation.activeRunId {
+            runIDs.insert(activeRunID)
+        }
+        let coreRunIDs = Set(runIDs.map { candidate in
+            model.runs.first {
+                $0.id == candidate || $0.localRunId == candidate
+            }?.id ?? candidate
+        })
+        return model.artifacts
+            .filter { coreRunIDs.contains($0.coreRunId) }
+            .sorted { $0.createdAt > $1.createdAt }
     }
 
     private func composer(_ detail: ConversationDetail) -> some View {
@@ -257,6 +280,56 @@ private struct PinnedApprovalBanner: View {
             activityID: activity.id,
             decision: decision
         )
+    }
+}
+
+private struct ConversationArtifactGallery: View {
+    let artifacts: [CoreArtifact]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Label(
+                    artifacts.contains(where: \.isImage)
+                        ? "Agent 生成的图片与产出"
+                        : "Agent 产出",
+                    systemImage: "photo.on.rectangle.angled"
+                )
+                .font(.subheadline.weight(.semibold))
+                Spacer()
+                Text("\(artifacts.count) 项")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 11) {
+                    ForEach(artifacts.prefix(8)) { artifact in
+                        NavigationLink {
+                            ArtifactDetailView(artifact: artifact)
+                        } label: {
+                            VStack(alignment: .leading, spacing: 8) {
+                                ArtifactThumbnail(
+                                    artifact: artifact,
+                                    size: 112
+                                )
+                                Text(artifact.title)
+                                    .font(.caption.weight(.semibold))
+                                    .lineLimit(1)
+                                Text(artifact.isImage ? "图片" : "文件")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .frame(width: 112, alignment: .leading)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: 690, alignment: .leading)
+        .hibroPanel()
+        .accessibilityIdentifier("conversation.artifacts")
     }
 }
 

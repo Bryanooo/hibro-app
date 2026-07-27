@@ -199,6 +199,22 @@ enum DemoData {
             """,
             sha256: nil,
             createdAt: now
+        ),
+        CoreArtifact(
+            id: "artifact_demo_image",
+            coreRunId: "run_demo_done",
+            nodeId: "node_studio_demo",
+            localArtifactId: "local_artifact_image",
+            title: "Hibro 状态图",
+            contentType: "image/png",
+            sizeBytes: 70,
+            content: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLqkwAAAABJRU5ErkJggg==",
+            previewKind: "image",
+            fileName: "hibro-status.png",
+            encoding: "base64",
+            transferStatus: "available",
+            sha256: nil,
+            createdAt: now
         )
     ]
 

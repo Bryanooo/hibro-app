@@ -12,6 +12,7 @@ enum AppPhase: Equatable {
 enum CoreConnectionState: String, Equatable {
     case connecting
     case connected
+    case degraded
     case reconnecting
     case offline
 
@@ -19,9 +20,125 @@ enum CoreConnectionState: String, Equatable {
         switch self {
         case .connecting: "正在连接"
         case .connected: "连接正常"
+        case .degraded: "连接波动"
         case .reconnecting: "正在重新连接"
         case .offline: "离线"
         }
+    }
+}
+
+enum CoreAPIConnectionState: Equatable {
+    case checking
+    case connected
+    case degraded
+    case offline
+
+    var title: String {
+        switch self {
+        case .checking: "检查中"
+        case .connected: "正常"
+        case .degraded: "连接波动"
+        case .offline: "不可达"
+        }
+    }
+}
+
+enum CoreRealtimeConnectionState: Equatable {
+    case connecting
+    case connected
+    case reconnecting
+    case suspended
+
+    var title: String {
+        switch self {
+        case .connecting: "连接中"
+        case .connected: "正常"
+        case .reconnecting: "恢复中"
+        case .suspended: "已暂停"
+        }
+    }
+}
+
+struct CoreConnectivity: Equatable {
+    static let offlineFailureThreshold = 3
+
+    private(set) var apiState = CoreAPIConnectionState.checking
+    private(set) var realtimeState = CoreRealtimeConnectionState.connecting
+    private(set) var consecutiveAPIFailures = 0
+    private(set) var apiMessage: String?
+    private(set) var realtimeMessage: String?
+
+    var presentationState: CoreConnectionState {
+        switch apiState {
+        case .checking:
+            return .connecting
+        case .offline:
+            return .offline
+        case .degraded:
+            return .degraded
+        case .connected:
+            return realtimeState == .reconnecting ? .reconnecting : .connected
+        }
+    }
+
+    var presentationMessage: String? {
+        switch presentationState {
+        case .degraded, .offline:
+            return apiMessage
+        case .reconnecting:
+            return realtimeMessage
+        case .connecting, .connected:
+            return nil
+        }
+    }
+
+    mutating func beginConnectionAttempt() {
+        apiState = .checking
+        realtimeState = .connecting
+        consecutiveAPIFailures = 0
+        apiMessage = nil
+        realtimeMessage = nil
+    }
+
+    mutating func recordAPISuccess() {
+        apiState = .connected
+        consecutiveAPIFailures = 0
+        apiMessage = nil
+    }
+
+    mutating func recordAPIFailure(
+        message: String,
+        countsTowardOffline: Bool = true,
+        immediatelyOffline: Bool = false
+    ) {
+        if countsTowardOffline {
+            consecutiveAPIFailures += 1
+        }
+        apiMessage = message
+        apiState = immediatelyOffline
+            || consecutiveAPIFailures >= Self.offlineFailureThreshold
+            ? .offline
+            : .degraded
+    }
+
+    mutating func recordRealtimeConnecting() {
+        realtimeState = .connecting
+        realtimeMessage = nil
+    }
+
+    mutating func recordRealtimeConnected() {
+        realtimeState = .connected
+        realtimeMessage = nil
+    }
+
+    mutating func recordRealtimeReconnecting(message: String) {
+        realtimeState = .reconnecting
+        realtimeMessage = message
+    }
+
+    mutating func suspendRealtime() {
+        realtimeState = .suspended
+        realtimeMessage = nil
     }
 }
 
@@ -53,7 +170,7 @@ enum AppSection: String, CaseIterable, Identifiable {
         switch self {
         case .home: "首页"
         case .conversations: "对话"
-        case .runs: "运行"
+        case .runs: "任务"
         case .more: "更多"
         }
     }
@@ -62,7 +179,7 @@ enum AppSection: String, CaseIterable, Identifiable {
         switch self {
         case .home: "house"
         case .conversations: "bubble.left.and.bubble.right"
-        case .runs: "play.circle"
+        case .runs: "checklist"
         case .more: "ellipsis.circle"
         }
     }
@@ -90,8 +207,7 @@ final class AppModel {
     var isWorking = false
     var isDemoMode = false
     var lastRefreshAt: Date?
-    var connectionState = CoreConnectionState.connecting
-    var connectionMessage: String?
+    var connectivity = CoreConnectivity()
     var appearance: AppAppearance
 
     let api = CoreAPI()
@@ -139,9 +255,20 @@ final class AppModel {
     var hasCachedContent: Bool {
         bootstrap != nil || !runs.isEmpty || !artifacts.isEmpty
     }
+    var connectionState: CoreConnectionState {
+        connectivity.presentationState
+    }
+    var connectionMessage: String? {
+        connectivity.presentationMessage
+    }
     var inboxItems: [InboxItem] {
         if let serverInboxItems {
             return serverInboxItems.filter { item in
+                if let runID = item.runID,
+                   let externalID = item.approvalExternalID,
+                   handledRunApprovalIDs.contains("\(runID):\(externalID)") {
+                    return false
+                }
                 switch item.approvalSource {
                 case .conversation(let activityID):
                     return !handledActivityIDs.contains(activityID)
@@ -178,7 +305,7 @@ final class AppModel {
         }
         await api.configure(baseURL: serverURL, tokens: session)
         let restoredCache = restoreCachedState(for: serverURL)
-        connectionState = .connecting
+        connectivity.beginConnectionAttempt()
         do {
             try await refresh()
             phase = .signedIn
@@ -193,7 +320,10 @@ final class AppModel {
                 phase = .signedOut
                 return
             }
-            markConnectionUnavailable(error)
+            markConnectionUnavailable(
+                error,
+                immediatelyOffline: !restoredCache
+            )
             phase = restoredCache ? .signedIn : .connectionUnavailable
             startGlobalEvents()
             processPendingDeepLink()
@@ -211,8 +341,7 @@ final class AppModel {
             return
         }
         phase = .authenticating
-        connectionState = .connecting
-        connectionMessage = nil
+        connectivity.beginConnectionAttempt()
         isWorking = true
         defer { isWorking = false }
         do {
@@ -229,8 +358,8 @@ final class AppModel {
             startGlobalEvents()
             processPendingDeepLink()
         } catch {
-            handle(error)
-            connectionState = .offline
+            markConnectionUnavailable(error, immediatelyOffline: true)
+            handle(error, updateConnectivity: false)
             phase = .signedOut
         }
     }
@@ -268,7 +397,9 @@ final class AppModel {
         let newInbox = await inboxRequest
         bootstrap = newBootstrap
         runs = newRuns.sorted { $0.updatedAt > $1.updatedAt }
-        artifacts = newArtifacts.sorted { $0.createdAt > $1.createdAt }
+        artifacts = newArtifacts
+            .filter { !$0.isLegacyAgentResult }
+            .sorted { $0.createdAt > $1.createdAt }
         serverInboxItems = newInbox?.compactMap(InboxItem.init(coreItem:))
 
         if let serverInboxItems {
@@ -304,8 +435,7 @@ final class AppModel {
         print("[Hibro Inbox] Run statuses: \(statuses)")
         #endif
         lastRefreshAt = Date()
-        connectionState = .connected
-        connectionMessage = nil
+        connectivity.recordAPISuccess()
         persistCachedState()
     }
 
@@ -315,7 +445,6 @@ final class AppModel {
         do {
             try await refresh()
         } catch {
-            markConnectionUnavailable(error)
             handle(error)
         }
     }
@@ -345,7 +474,6 @@ final class AppModel {
             try await refresh()
             return true
         } catch {
-            markConnectionUnavailable(error)
             handle(error)
             return false
         }
@@ -428,7 +556,7 @@ final class AppModel {
     ) async -> Bool {
         guard content.nilIfBlank != nil else { return false }
         if isDemoMode {
-            handledActivityIDs.insert(activityID)
+            markConversationActivityHandled(activityID: activityID)
             return true
         }
         isWorking = true
@@ -440,12 +568,10 @@ final class AppModel {
             )
             conversationDetail = detail
             conversationDetailsByID[conversationID] = detail
-            handledActivityIDs.insert(activityID)
+            markConversationActivityHandled(activityID: activityID)
             watchConversation(conversationID)
-            persistCachedState()
             return true
         } catch {
-            markConnectionUnavailable(error)
             handle(error)
             return false
         }
@@ -468,11 +594,18 @@ final class AppModel {
         decision: ApprovalDecision
     ) async -> Bool {
         if isDemoMode {
-            handledActivityIDs.insert(activityID)
+            markConversationApprovalHandled(
+                conversationID: conversationID,
+                activityID: activityID
+            )
             return true
         }
         isWorking = true
         defer { isWorking = false }
+        let originalActivity = approvalActivity(
+            conversationID: conversationID,
+            activityID: activityID
+        )
         do {
             let detail = try await api.decideConversationApproval(
                 conversationID: conversationID,
@@ -481,8 +614,13 @@ final class AppModel {
             )
             conversationDetail = detail
             conversationDetailsByID[conversationID] = detail
-            handledActivityIDs.insert(activityID)
+            markConversationApprovalHandled(
+                conversationID: conversationID,
+                activityID: activityID,
+                activity: originalActivity
+            )
             watchConversation(conversationID)
+            scheduleGlobalRefresh(delay: .zero)
             return true
         } catch {
             handle(error)
@@ -497,7 +635,7 @@ final class AppModel {
         freshSession: Bool
     ) async -> Bool {
         if isDemoMode {
-            errorMessage = "演示模式不会发起运行"
+            errorMessage = "演示模式不会发起任务"
             return false
         }
         isWorking = true
@@ -566,10 +704,14 @@ final class AppModel {
             if let index = runs.firstIndex(where: { $0.id == runID }) {
                 runs[index] = updated
             }
-            handledRunApprovalIDs.insert("\(runID):\(externalID)")
+            markRunApprovalHandled(
+                runID: runID,
+                externalID: externalID
+            )
             if let events = try? await api.runEvents(id: runID) {
                 runEventsByID[runID] = events
             }
+            scheduleGlobalRefresh(delay: .zero)
             return true
         } catch {
             handle(error)
@@ -584,7 +726,10 @@ final class AppModel {
             return (
                 artifact,
                 ArtifactPayload(
-                    data: Data(content.utf8),
+                    data: Self.embeddedArtifactData(
+                        content: content,
+                        encoding: artifact.encoding
+                    ),
                     suggestedFilename: artifact.fileName,
                     contentType: artifact.contentType
                 )
@@ -608,7 +753,10 @@ final class AppModel {
             let payload: ArtifactPayload
             if isDemoMode, let content = artifact?.content {
                 payload = ArtifactPayload(
-                    data: Data(content.utf8),
+                    data: Self.embeddedArtifactData(
+                        content: content,
+                        encoding: artifact?.encoding
+                    ),
                     suggestedFilename: artifact?.fileName,
                     contentType: artifact?.contentType
                 )
@@ -638,9 +786,7 @@ final class AppModel {
 
     func resumeRealtimeSync() {
         guard phase == .signedIn, !isDemoMode else { return }
-        if connectionState != .connected {
-            connectionState = .reconnecting
-        }
+        connectivity.recordRealtimeConnecting()
         startGlobalEvents()
         if let selectedConversationID {
             watchConversation(selectedConversationID)
@@ -657,6 +803,7 @@ final class AppModel {
         globalStreamTask = nil
         globalRefreshTask?.cancel()
         globalRefreshTask = nil
+        connectivity.suspendRealtime()
     }
 
     func logout() {
@@ -678,8 +825,7 @@ final class AppModel {
         conversationSequences = [:]
         selectedConversationID = nil
         isDemoMode = false
-        connectionState = .connecting
-        connectionMessage = nil
+        connectivity.beginConnectionAttempt()
         clearCachedState()
         phase = .signedOut
     }
@@ -700,8 +846,8 @@ final class AppModel {
         handledActivityIDs = []
         handledRunApprovalIDs = []
         lastRefreshAt = Date()
-        connectionState = .connected
-        connectionMessage = nil
+        connectivity.recordAPISuccess()
+        connectivity.recordRealtimeConnected()
         phase = .signedIn
     }
 
@@ -778,6 +924,7 @@ final class AppModel {
         conversationStreamTask = Task { [weak self] in
             guard let self else { return }
             var sequence = conversationSequences[id] ?? 0
+            var retryAttempt = 0
             while !Task.isCancelled {
                 do {
                     let request = try await api.conversationEventRequest(
@@ -789,21 +936,28 @@ final class AppModel {
                     ) {
                         if Task.isCancelled { return }
                         sequence = max(sequence, event.sequence)
+                        retryAttempt = 0
                         conversationSequences[id] = sequence
-                        connectionState = .connected
-                        connectionMessage = nil
+                        connectivity.recordAPISuccess()
                         scheduleConversationRefresh(id: id)
                     }
                     if !Task.isCancelled {
-                        try? await Task.sleep(for: .seconds(1))
+                        try? await Task.sleep(
+                            for: Self.reconnectDelay(attempt: retryAttempt)
+                        )
+                        retryAttempt = min(retryAttempt + 1, 5)
                     }
                 } catch is CancellationError {
                     return
                 } catch {
                     if Task.isCancelled { return }
-                    connectionState = .reconnecting
-                    connectionMessage = connectionErrorMessage(error)
-                    try? await Task.sleep(for: .seconds(2))
+                    if case APIError.unauthorized = error {
+                        try? await api.refreshAuthorization()
+                    }
+                    try? await Task.sleep(
+                        for: Self.reconnectDelay(attempt: retryAttempt)
+                    )
+                    retryAttempt = min(retryAttempt + 1, 5)
                 }
             }
         }
@@ -811,27 +965,46 @@ final class AppModel {
 
     private func startGlobalEvents() {
         globalStreamTask?.cancel()
+        connectivity.recordRealtimeConnecting()
         globalStreamTask = Task { [weak self] in
             guard let self else { return }
+            var retryAttempt = 0
             while !Task.isCancelled {
                 do {
+                    if retryAttempt > 0 {
+                        try await refresh()
+                    }
                     let request = try await api.globalEventRequest()
                     for try await _ in SSEClient.coreEvents(request: request) {
                         if Task.isCancelled { return }
-                        connectionState = .connected
-                        connectionMessage = nil
+                        retryAttempt = 0
+                        connectivity.recordAPISuccess()
+                        connectivity.recordRealtimeConnected()
                         scheduleGlobalRefresh()
                     }
                     if !Task.isCancelled {
-                        try? await Task.sleep(for: .seconds(1))
+                        connectivity.recordRealtimeReconnecting(
+                            message: "实时连接已中断，正在恢复"
+                        )
+                        try? await Task.sleep(
+                            for: Self.reconnectDelay(attempt: retryAttempt)
+                        )
+                        retryAttempt = min(retryAttempt + 1, 5)
                     }
                 } catch is CancellationError {
                     return
                 } catch {
                     if Task.isCancelled { return }
-                    connectionState = .reconnecting
-                    connectionMessage = connectionErrorMessage(error)
-                    try? await Task.sleep(for: .seconds(2))
+                    if case APIError.unauthorized = error {
+                        try? await api.refreshAuthorization()
+                    }
+                    connectivity.recordRealtimeReconnecting(
+                        message: connectionErrorMessage(error)
+                    )
+                    try? await Task.sleep(
+                        for: Self.reconnectDelay(attempt: retryAttempt)
+                    )
+                    retryAttempt = min(retryAttempt + 1, 5)
                 }
             }
         }
@@ -869,14 +1042,140 @@ final class AppModel {
                 let detail = try await api.conversation(id: id)
                 conversationDetail = detail
                 conversationDetailsByID[id] = detail
-                connectionState = .connected
-                connectionMessage = nil
+                connectivity.recordAPISuccess()
                 persistCachedState()
             } catch {
                 if error is CancellationError { return }
-                markConnectionUnavailable(error)
+                #if DEBUG
+                print(
+                    "[Hibro Conversation] Refresh failed: "
+                        + connectionErrorMessage(error)
+                )
+                #endif
             }
         }
+    }
+
+    nonisolated private static func reconnectDelay(
+        attempt: Int
+    ) -> Duration {
+        let seconds = min(30, 1 << min(max(attempt, 0), 5))
+        return .seconds(seconds)
+    }
+
+    private func approvalActivity(
+        conversationID: String,
+        activityID: String
+    ) -> CoreActivity? {
+        if conversationDetail?.conversation.id == conversationID,
+           let activity = conversationDetail?.activities.first(
+               where: { $0.id == activityID }
+           ) {
+            return activity
+        }
+        return conversationDetailsByID[conversationID]?.activities.first {
+            $0.id == activityID
+        }
+    }
+
+    private func markConversationActivityHandled(activityID: String) {
+        handledActivityIDs.insert(activityID)
+        if let items = serverInboxItems {
+            serverInboxItems = items.filter { item in
+                if item.id == "activity:\(activityID)" { return false }
+                if case .conversation(let candidateID) = item.approvalSource {
+                    return candidateID != activityID
+                }
+                return true
+            }
+        }
+        persistCachedState()
+    }
+
+    private func markConversationApprovalHandled(
+        conversationID: String,
+        activityID: String,
+        activity: CoreActivity? = nil
+    ) {
+        let sourceItem = serverInboxItems?.first { item in
+            guard item.kind == .approval else { return false }
+            if item.id == "activity:\(activityID)" { return true }
+            if case .conversation(let candidateID) = item.approvalSource {
+                return candidateID == activityID
+            }
+            return false
+        }
+        let resolvedActivity = activity
+            ?? approvalActivity(
+                conversationID: conversationID,
+                activityID: activityID
+            )
+        let externalID = resolvedActivity?.approval?.externalId
+            ?? sourceItem?.approvalExternalID
+        let runID = coreRunID(
+            matching: resolvedActivity?.runId ?? sourceItem?.runID
+        )
+
+        handledActivityIDs.insert(activityID)
+        if let runID, let externalID {
+            handledRunApprovalIDs.insert("\(runID):\(externalID)")
+        }
+        if let items = serverInboxItems {
+            serverInboxItems = items.filter { item in
+                guard item.kind == .approval else { return true }
+                if item.id == "activity:\(activityID)" { return false }
+                if case .conversation(let candidateID) = item.approvalSource,
+                   candidateID == activityID {
+                    return false
+                }
+                if let runID,
+                   let externalID,
+                   item.runID == runID,
+                   item.approvalExternalID == externalID {
+                    return false
+                }
+                return true
+            }
+        }
+        persistCachedState()
+    }
+
+    private func markRunApprovalHandled(
+        runID: String,
+        externalID: String
+    ) {
+        handledRunApprovalIDs.insert("\(runID):\(externalID)")
+
+        let matchingActivityIDs = conversationDetailsByID.values
+            .flatMap(\.activities)
+            .filter { activity in
+                activity.approval?.externalId == externalID
+                    && coreRunID(matching: activity.runId) == runID
+            }
+            .map(\.id)
+        handledActivityIDs.formUnion(matchingActivityIDs)
+
+        if let items = serverInboxItems {
+            serverInboxItems = items.filter { item in
+                guard item.kind == .approval else { return true }
+                if item.runID == runID,
+                   item.approvalExternalID == externalID {
+                    return false
+                }
+                if case .conversation(let activityID) = item.approvalSource {
+                    return !matchingActivityIDs.contains(activityID)
+                }
+                return true
+            }
+        }
+        persistCachedState()
+    }
+
+    private func coreRunID(matching runID: String?) -> String? {
+        guard let runID else { return nil }
+        return runs.first {
+            $0.id == runID || $0.localRunId == runID
+        }?.id ?? runID
     }
 
     private func refreshRunEvents(for runs: [CoreRun]) async {
@@ -981,9 +1280,34 @@ final class AppModel {
         #endif
     }
 
-    private func markConnectionUnavailable(_ error: Error) {
-        connectionState = .offline
-        connectionMessage = connectionErrorMessage(error)
+    private func markConnectionUnavailable(
+        _ error: Error,
+        immediatelyOffline: Bool = false
+    ) {
+        connectivity.recordAPIFailure(
+            message: connectionErrorMessage(error),
+            countsTowardOffline: Self.isAvailabilityFailure(error),
+            immediatelyOffline: immediatelyOffline
+        )
+    }
+
+    nonisolated private static func isAvailabilityFailure(
+        _ error: Error
+    ) -> Bool {
+        if error is URLError {
+            return true
+        }
+        guard let apiError = error as? APIError else {
+            return false
+        }
+        switch apiError {
+        case .invalidResponse:
+            return true
+        case .server(let status, _):
+            return status >= 500
+        case .notConfigured, .invalidURL, .unauthorized:
+            return false
+        }
     }
 
     private func connectionErrorMessage(_ error: Error) -> String {
@@ -1056,7 +1380,7 @@ final class AppModel {
         }
         bootstrap = state.bootstrap
         runs = state.runs
-        artifacts = state.artifacts
+        artifacts = state.artifacts.filter { !$0.isLegacyAgentResult }
         runEventsByID = state.runEventsByID
         conversationDetailsByID = state.conversationDetailsByID
         serverInboxItems = state.inboxItems
@@ -1079,9 +1403,14 @@ final class AppModel {
         .appending(path: "app-state.json")
     }
 
-    private func handle(_ error: Error) {
+    private func handle(
+        _ error: Error,
+        updateConnectivity: Bool = true
+    ) {
         if let urlError = error as? URLError {
-            markConnectionUnavailable(error)
+            if updateConnectivity {
+                markConnectionUnavailable(error)
+            }
             errorMessage = switch urlError.code {
             case .cannotFindHost:
                 "找不到 Hibro Core。请检查地址、DNS 或局域网连接。"
@@ -1164,6 +1493,16 @@ final class AppModel {
             )
             .trimmingCharacters(in: CharacterSet(charactersIn: ".-"))
         return name.isEmpty ? "artifact" : name
+    }
+
+    nonisolated private static func embeddedArtifactData(
+        content: String,
+        encoding: String?
+    ) -> Data {
+        if encoding == "base64", let data = Data(base64Encoded: content) {
+            return data
+        }
+        return Data(content.utf8)
     }
 }
 

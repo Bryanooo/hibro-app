@@ -12,30 +12,15 @@ struct ArtifactsView: View {
                 EmptyStateView(
                     symbol: "doc.text",
                     title: "还没有产出",
-                    message: "Agent 完成包含结果的运行后，产出会显示在这里。"
+                    message: "Agent 明确生成的文件、报告、图片和补丁会显示在这里；文本回复请在对话中查看。"
                 )
             } else {
                 List(filteredArtifacts) { artifact in
                     NavigationLink {
                         ArtifactDetailView(artifact: artifact)
                     } label: {
-                        HStack(spacing: 13) {
-                            Image(systemName: "doc.richtext")
-                                .foregroundStyle(HibroTheme.orange)
-                                .frame(width: 40, height: 40)
-                                .background(
-                                    HibroTheme.orange.opacity(0.1),
-                                    in: RoundedRectangle(cornerRadius: 11)
-                                )
-                            VStack(alignment: .leading, spacing: 5) {
-                                Text(artifact.title)
-                                    .font(.subheadline.weight(.semibold))
-                                Text("\(ByteCountFormatter.string(fromByteCount: Int64(artifact.sizeBytes), countStyle: .file)) · \(DateText.relative(artifact.createdAt))")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        .padding(.vertical, 6)
+                        ArtifactRow(artifact: artifact)
+                            .padding(.vertical, 6)
                     }
                 }
                 .listStyle(.insetGrouped)
@@ -52,6 +37,84 @@ struct ArtifactsView: View {
             $0.title.localizedCaseInsensitiveContains(query)
                 || $0.content?.localizedCaseInsensitiveContains(query) == true
         }
+    }
+}
+
+private struct ArtifactRow: View {
+    let artifact: CoreArtifact
+
+    var body: some View {
+        HStack(spacing: 13) {
+            ArtifactThumbnail(artifact: artifact, size: 44)
+            VStack(alignment: .leading, spacing: 5) {
+                Text(artifact.title)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+                HStack(spacing: 5) {
+                    if artifact.isImage {
+                        Text("图片")
+                    }
+                    Text(
+                        ByteCountFormatter.string(
+                            fromByteCount: Int64(artifact.sizeBytes),
+                            countStyle: .file
+                        )
+                    )
+                    Text("·")
+                    Text(DateText.relative(artifact.createdAt))
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
+struct ArtifactThumbnail: View {
+    @Environment(AppModel.self) private var model
+    let artifact: CoreArtifact
+    var size: CGFloat = 56
+    @State private var thumbnail: UIImage?
+
+    var body: some View {
+        Group {
+            if let thumbnail {
+                Image(uiImage: thumbnail)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                Image(systemName: artifact.displaySymbol)
+                    .font(.title3)
+                    .foregroundStyle(
+                        artifact.isImage ? HibroTheme.cyan : HibroTheme.orange
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(
+                        (artifact.isImage ? HibroTheme.cyan : HibroTheme.orange)
+                            .opacity(0.1)
+                    )
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(RoundedRectangle(cornerRadius: size * 0.24))
+        .overlay {
+            RoundedRectangle(cornerRadius: size * 0.24)
+                .stroke(HibroTheme.border)
+        }
+        .task(id: thumbnailTaskID) {
+            guard artifact.isImage,
+                  artifact.isContentAvailable,
+                  artifact.sizeBytes <= 25 * 1_024 * 1_024,
+                  let result = await model.loadArtifact(id: artifact.id)
+            else {
+                return
+            }
+            thumbnail = UIImage(data: result.1.data)
+        }
+    }
+
+    private var thumbnailTaskID: String {
+        "\(artifact.id):\(artifact.transferStatus ?? "legacy")"
     }
 }
 
@@ -103,6 +166,8 @@ struct ArtifactDetailView: View {
                         .resizable()
                         .scaledToFit()
                         .frame(maxWidth: .infinity)
+                        .accessibilityLabel("图片预览")
+                        .accessibilityIdentifier("artifact.imagePreview")
                 } else if isLoading {
                     HStack(spacing: 12) {
                         ProgressView()
@@ -150,7 +215,9 @@ struct ArtifactDetailView: View {
     }
 
     private var textContent: String? {
-        if let content = artifact.content { return content }
+        if artifact.encoding != "base64", let content = artifact.content {
+            return content
+        }
         guard artifact.encoding != "base64",
               let contentData,
               artifact.previewKind == "markdown"
@@ -166,7 +233,7 @@ struct ArtifactDetailView: View {
     }
 
     private var image: Image? {
-        guard artifact.previewKind == "image",
+        guard artifact.isImage,
               let contentData,
               let image = UIImage(data: contentData)
         else {
@@ -176,20 +243,30 @@ struct ArtifactDetailView: View {
     }
 
     private var previewTitle: String {
-        artifact.transferStatus == "failed"
-            ? "产出上传失败"
-            : "使用系统预览打开"
+        if artifact.transferStatus == "failed" {
+            return "产出上传失败"
+        }
+        if !artifact.isContentAvailable {
+            return "图片仍在同步"
+        }
+        return artifact.isImage ? "图片暂时无法显示" : "使用系统预览打开"
     }
 
     private var previewMessage: String {
         if artifact.transferStatus == "failed" {
             return artifact.uploadError ?? "Core 暂时无法提供这份产出。"
         }
+        if !artifact.isContentAvailable {
+            return "Node 正在将文件上传到 Core，稍后刷新即可查看。"
+        }
         return "PDF、音视频和其他文件类型会下载后交给系统安全预览。"
     }
 
     private func loadContent() async {
-        guard artifact.transferStatus != "failed" else { return }
+        guard artifact.transferStatus != "failed",
+              artifact.isContentAvailable else {
+            return
+        }
         isLoading = true
         defer { isLoading = false }
         if let result = await model.loadArtifact(id: artifact.id) {
